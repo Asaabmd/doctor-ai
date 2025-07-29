@@ -3,8 +3,7 @@ import openai
 import os
 
 app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY") or "sk-your-openai-key"
-
+openai.api_key = os.getenv("OPENAI_API_KEY")  # ✅ No fallback!
 
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
@@ -33,18 +32,19 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[{
-            "role":
-            "system",
-            "content":
-            "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
-        }, {
-            "role": "user",
-            "content": prompt
-        }],
-        temperature=0.6)
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.6
+    )
     return response['choices'][0]['message']['content']
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -54,8 +54,7 @@ def index():
         context = {
             "age_range": request.form.get("age_range", "skip"),
             "sex": request.form.get("sex", "skip"),
-            "existing_conditions": request.form.get("existing_conditions",
-                                                    "skip"),
+            "existing_conditions": request.form.get("existing_conditions", "skip"),
             "allergies": request.form.get("allergies", "skip"),
             "medications": request.form.get("medications", "skip"),
             "onset": request.form.get("onset", "unknown"),
@@ -69,7 +68,6 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
     return render_template("index.html", response=output)
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=3000, debug=True)
