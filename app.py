@@ -37,8 +37,7 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
             "role":
             "system",
             "content":
-            ("You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
-             )
+            "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
         }, {
             "role": "user",
             "content": prompt
@@ -69,18 +68,6 @@ def index():
             output = ask_chatgpt(symptoms, context)
         except Exception as e:
             output = f"⚠️ Error: {e}"
-    return render_template("index.html", response=output)
-
-
-from flask import render_template, request
-
-
-@app.route("/", methods=["GET", "POST"])
-def index():
-    output = ""
-    if request.method == "POST":
-        symptoms = request.form.get("symptoms", "")
-        output = f"You said: {symptoms}"  # or call your ChatGPT function here
     return render_template("index.html", response=output)
 
 
