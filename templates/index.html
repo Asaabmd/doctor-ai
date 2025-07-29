@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doctor AI - Symptom Checker</title>
+</head>
+<body>
+    <h1>Doctor AI - Educational Symptom Summary</h1>
+    <form method="post">
+        <label>Symptoms:</label><br>
+        <textarea name="symptoms" rows="4" cols="50"></textarea><br><br>
+
+        <label>Age Range:</label><input type="text" name="age_range"><br>
+        <label>Sex:</label><input type="text" name="sex"><br>
+        <label>Existing Conditions:</label><input type="text" name="existing_conditions"><br>
+        <label>Allergies:</label><input type="text" name="allergies"><br>
+        <label>Medications:</label><input type="text" name="medications"><br>
+        <label>Onset:</label><input type="text" name="onset"><br>
+        <label>What Makes It Better:</label><input type="text" name="better"><br>
+        <label>What Makes It Worse:</label><input type="text" name="worse"><br>
+        <label>Severity (1–10):</label><input type="text" name="severity"><br>
+        <label>Treatments Tried:</label><input type="text" name="treatments"><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+
+    {% if response %}
+        <h2>AI-Generated Educational Summary:</h2>
+        <pre>{{ response }}</pre>
+    {% endif %}
+</body>
+</html>
