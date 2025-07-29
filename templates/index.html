@@ -1,31 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Doctor AI - Symptom Checker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctor AI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      padding-top: 120px;
+    }
+    .top-left {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 100px;
+    }
+    .top-right {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 100px;
+    }
+    .form-section {
+      max-width: 600px;
+      margin: auto;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+    }
+    input[type="text"] {
+      width: 100%;
+    }
+    .output {
+      background: #f5f5f5;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+  </style>
 </head>
 <body>
-    <h1>Doctor AI - Educational Symptom Summary</h1>
-    <form method="post">
-        <label>Symptoms:</label><br>
-        <textarea name="symptoms" rows="4" cols="50"></textarea><br><br>
 
-        <label>Age Range:</label><input type="text" name="age_range"><br>
-        <label>Sex:</label><input type="text" name="sex"><br>
-        <label>Existing Conditions:</label><input type="text" name="existing_conditions"><br>
-        <label>Allergies:</label><input type="text" name="allergies"><br>
-        <label>Medications:</label><input type="text" name="medications"><br>
-        <label>Onset:</label><input type="text" name="onset"><br>
-        <label>What Makes It Better:</label><input type="text" name="better"><br>
-        <label>What Makes It Worse:</label><input type="text" name="worse"><br>
-        <label>Severity (1–10):</label><input type="text" name="severity"><br>
-        <label>Treatments Tried:</label><input type="text" name="treatments"><br><br>
+  <!-- 🧑 Doctor image top left -->
+  <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor Image" class="top-left">
 
-        <input type="submit" value="Submit">
+  <!-- 🧠 Logo top right -->
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="top-right">
+
+  <div class="form-section">
+    <h1>Doctor AI</h1>
+    <form method="POST">
+      <label>Describe your symptoms:</label><br />
+      <textarea name="symptoms"></textarea><br /><br />
+
+      <label>Age Range:</label>
+      <input type="text" name="age_range"><br />
+      <label>Sex/Gender:</label>
+      <input type="text" name="sex"><br />
+      <label>Existing Conditions:</label>
+      <input type="text" name="existing_conditions"><br />
+      <label>Allergies:</label>
+      <input type="text" name="allergies"><br />
+      <label>Medications:</label>
+      <input type="text" name="medications"><br />
+      <label>Onset:</label>
+      <input type="text" name="onset"><br />
+      <label>What Makes It Better:</label>
+      <input type="text" name="better"><br />
+      <label>What Makes It Worse:</label>
+      <input type="text" name="worse"><br />
+      <label>Severity (1-10):</label>
+      <input type="text" name="severity"><br />
+      <label>Treatments Tried:</label>
+      <input type="text" name="treatments"><br /><br />
+
+      <button type="submit">Submit</button>
     </form>
 
     {% if response %}
-        <h2>AI-Generated Educational Summary:</h2>
-        <pre>{{ response }}</pre>
+    <div class="output">
+      <h3>AI-Generated Educational Summary:</h3>
+      <p>{{ response }}</p>
+    </div>
     {% endif %}
+  </div>
+
 </body>
 </html>
