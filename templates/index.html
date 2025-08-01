@@ -2,82 +2,118 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor AI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
             margin: 0;
-            padding: 0;
+            padding: 0 20px;
+            background-color: #f4f4f4;
         }
-
-        header {
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 10px 0;
         }
-
-        header img {
+        .header img {
             height: 60px;
         }
-
         h1 {
-            font-size: 24px; /* 👈 Smaller font size */
-            margin: 10px 0;   /* 👈 Reduce space above/below title */
+            text-align: center;
+            font-size: 24px;
+            margin: 10px 0;
         }
-
         form {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 10px;
+            background-color: #fff;
+            padding: 20px;
+            margin-top: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
         label {
             display: block;
-            margin: 10px 0 5px;
+            margin-top: 12px;
         }
-
-        input, textarea, select {
+        input[type="text"],
+        input[type="number"],
+        textarea {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
+            margin-top: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
-
         button {
+            margin-top: 20px;
             padding: 10px 20px;
-            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
-
+        button:hover {
+            background-color: #0056b3;
+        }
         .response {
             margin-top: 20px;
-            text-align: left;
-            white-space: pre-wrap;
+            background-color: #e9f5ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
         }
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor Image">
-        <h1>Doctor AI</h1>
+    <div class="header">
+        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-    </header>
-
+    </div>
+    <h1>Doctor AI</h1>
     <form method="POST">
-        <!-- your form fields -->
         <label for="symptoms">Describe your symptoms:</label>
-        <textarea name="symptoms" required></textarea>
+        <textarea name="symptoms" rows="4" required></textarea>
 
-        <!-- Add other fields here... -->
+        <label for="age_range">Age range:</label>
+        <input type="text" name="age_range" placeholder="e.g., 30-40">
+
+        <label for="sex">Sex/Gender:</label>
+        <input type="text" name="sex" placeholder="e.g., Male/Female/Other">
+
+        <label for="existing_conditions">Existing Conditions:</label>
+        <input type="text" name="existing_conditions" placeholder="e.g., Diabetes">
+
+        <label for="allergies">Allergies:</label>
+        <input type="text" name="allergies">
+
+        <label for="medications">Current Medications:</label>
+        <input type="text" name="medications">
+
+        <label for="onset">When did it start?</label>
+        <input type="text" name="onset">
+
+        <label for="better">What makes it better?</label>
+        <input type="text" name="better">
+
+        <label for="worse">What makes it worse?</label>
+        <input type="text" name="worse">
+
+        <label for="severity">Severity (1–10):</label>
+        <input type="number" name="severity" min="1" max="10">
+
+        <label for="treatments">Treatments already tried:</label>
+        <input type="text" name="treatments">
+
+        <p><strong>Scroll down to fill out the form ⬇️ Click Submit when done to receive your educational summary.</strong></p>
 
         <button type="submit">Submit</button>
     </form>
-
     {% if response %}
-        <div class="response">
-            <h2>AI Educational Summary:</h2>
-            <p>{{ response }}</p>
-        </div>
+    <div class="response">
+        <h3>Doctor AI Response:</h3>
+        <p>{{ response|safe }}</p>
+    </div>
     {% endif %}
 </body>
 </html>
