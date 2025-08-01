@@ -1,130 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doctor AI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0 20px;
-            background-color: #f4f4f4;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .header img {
-            height: 60px;
-        }
-        h1 {
-            text-align: center;
-            font-size: 24px;
-            margin: 10px 0;
-        }
-        form {
-            background-color: #fff;
-            padding: 20px;
-            margin-top: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        label {
-            display: block;
-            margin-top: 12px;
-        }
-        input[type="text"],
-        input[type="number"],
-        textarea {
-            width: 100%;
-            padding: 8px;
-            margin-top: 4px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .response {
-            margin-top: 20px;
-            background-color: #e9f5ff;
-            padding: 15px;
-            border-left: 4px solid #007bff;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctor AI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0 20px;
+      background-color: #f4f4f4;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+    }
+    .header img {
+      height: 60px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin: 10px 0;
+    }
+    p.instructions {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #555;
+      margin-bottom: 10px;
+    }
+    form {
+      background-color: #fff;
+      padding: 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+    }
+    .field-group {
+      display: flex;
+      align-items: center;
+    }
+    .field-group input,
+    .field-group textarea {
+      flex: 1;
+    }
+    .mic-button {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .response {
+      margin-top: 20px;
+      background-color: #e9f5ff;
+      padding: 15px;
+      border-left: 4px solid #007bff;
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+  <div class="header">
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+  </div>
+
+  <h1>Doctor AI</h1>
+  <p class="instructions">Please type or tap the 🎤 icon to speak your response. Be as detailed as possible for a better evaluation.</p>
+
+  <form method="POST">
+    <label for="symptoms">Describe your symptoms:</label>
+    <div class="field-group">
+      <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
+      <button type="button" class="mic-button" onclick="startRecognition('symptoms')" title="Speak your response">🎤</button>
     </div>
-    <h1>Doctor AI</h1>
-    <form method="POST">
-        <label for="symptoms">Describe your symptoms:</label>
-<p style="font-size: 0.9rem; color: #555; margin-top: -5px; margin-bottom: 10px;">
-  Please be as specific as possible. Include timing, severity, location, and any associated symptoms. The more detail you provide, the better the educational evaluation.
-</p>
-<textarea name="symptoms" rows="4" required></textarea>
+    <p style="font-size: 0.9rem; color: #555;">Include timing, severity, and associated symptoms for best results.</p>
 
-        <label for="age_range">Age range:</label>
-        <input type="text" name="age_range" placeholder="e.g., 30-40">
+    {% for field, label in {
+      "age_range": "Age range:",
+      "sex": "Sex/Gender:",
+      "existing_conditions": "Existing Conditions:",
+      "allergies": "Allergies:",
+      "medications": "Current Medications:",
+      "onset": "When did it start?",
+      "better": "What makes it better?",
+      "worse": "What makes it worse?",
+      "severity": "Severity (1–10):",
+      "treatments": "Treatments already tried:"
+    }.items() %}
+      <label for="{{ field }}">{{ label }}</label>
+      <div class="field-group">
+        <input
+          type="{{ 'number' if field == 'severity' else 'text' }}"
+          name="{{ field }}"
+          id="{{ field }}"
+          {% if field == 'severity' %} min="1" max="10"{% endif %}
+        />
+        <button type="button" class="mic-button" onclick="startRecognition('{{ field }}')" title="Speak your response">🎤</button>
+      </div>
+    {% endfor %}
 
-        <label for="sex">Sex/Gender:</label>
-        <input type="text" name="sex" placeholder="e.g., Male/Female/Other">
+    <p><strong>Scroll down to fill out the form ⬇️ Click Submit when done to receive your educational summary.</strong></p>
 
-        <label for="existing_conditions">Existing Conditions:</label>
-        <input type="text" name="existing_conditions" placeholder="e.g., Diabetes">
+    <button type="submit">Submit</button>
+  </form>
 
-        <label for="allergies">Allergies:</label>
-        <input type="text" name="allergies">
+  {% if response %}
+  <div class="response">
+    <h3>Doctor AI Response:</h3>
+    <p>{{ response|safe }}</p>
+  </div>
+  {% endif %}
 
-        <label for="medications">Current Medications:</label>
-        <input type="text" name="medications">
-
-        <label for="onset">When did it start?</label>
-        <input type="text" name="onset">
-
-        <label for="better">What makes it better?</label>
-        <input type="text" name="better">
-
-        <label for="worse">What makes it worse?</label>
-        <input type="text" name="worse">
-
-        <label for="severity">Severity (1–10):</label>
-        <input type="number" name="severity" min="1" max="10">
-
-        <label for="treatments">Treatments already tried:</label>
-        <input type="text" name="treatments">
-
-        <p><strong>Scroll down to fill out the form ⬇️ Click Submit when done to receive your educational summary.</strong></p>
-
-        <button type="submit">Submit</button>
-    </form>
-    {% if response %}
-    <div class="response">
-        <h3>Doctor AI Response:</h3>
-        <p>{{ response|safe }}</p>
-    </div>
-    {% endif %}
-    <script>
+  <script>
     function startRecognition(targetId) {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-
       recognition.start();
 
       recognition.onresult = function(event) {
@@ -139,6 +159,6 @@
         alert('Speech recognition error: ' + event.error);
       };
     }
-    </script>
+  </script>
 </body>
 </html>
