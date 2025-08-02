@@ -7,9 +7,9 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0 20px;
-      background-color: #f4f4f4;
     }
     .header {
       display: flex;
@@ -30,21 +30,16 @@
       padding: 20px;
       margin-top: 10px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     label {
       display: block;
       margin-top: 12px;
     }
-    .field-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
     input[type="text"],
     input[type="number"],
     textarea {
-      flex: 1;
+      width: 100%;
       padding: 8px;
       margin-top: 4px;
       border: 1px solid #ccc;
@@ -68,60 +63,76 @@
       padding: 15px;
       border-left: 4px solid #007bff;
     }
-    .mic-btn {
+    .mic-button {
+      margin-top: 5px;
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 20px;
+      font-size: 18px;
+      color: #555;
+    }
+    .mic-button:hover {
+      color: #000;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image" />
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" />
   </div>
 
   <h1>Doctor AI</h1>
 
-  <p><strong>Click the 🎤 icon next to any field to speak instead of typing.</strong></p>
-
   <form method="POST">
     <label for="symptoms">Describe your symptoms:</label>
     <p style="font-size: 0.9rem; color: #555; margin-top: -5px; margin-bottom: 10px;">
-      Please be as specific as possible. Include timing, severity, location, and any associated symptoms. The more detail you provide, the better the educational evaluation.
+      Please be as specific as possible. Include timing, severity, location, and associated symptoms.<br>
+      <strong>Click the 🎤 icon to speak instead of typing.</strong>
     </p>
-    <div class="field-group">
-      <textarea id="symptoms" name="symptoms" rows="4" required></textarea>
-      <button type="button" class="mic-btn" onclick="startRecognition('symptoms')">🎤</button>
-    </div>
+    <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
+    <button type="button" class="mic-button" onclick="startRecognition('symptoms')">🎤</button>
 
-    {% for field, placeholder in {
-      "age_range": "e.g., 30-40",
-      "sex": "e.g., Male/Female/Other",
-      "existing_conditions": "e.g., Diabetes",
-      "allergies": "",
-      "medications": "",
-      "onset": "",
-      "better": "",
-      "worse": "",
-      "severity": "",
-      "treatments": ""
-    }.items() %}
-      <label for="{{ field }}">{{ field.replace('_', ' ').capitalize() }}:</label>
-      <div class="field-group">
-        <input
-          type="{{ 'number' if field == 'severity' else 'text' }}"
-          name="{{ field }}"
-          id="{{ field }}"
-          placeholder="{{ placeholder }}"
-          {% if field == 'severity' %}min="1" max="10"{% endif %}
-        >
-        <button type="button" class="mic-btn" onclick="startRecognition('{{ field }}')">🎤</button>
-      </div>
-    {% endfor %}
+    <label>Age range:</label>
+    <input type="text" name="age_range" id="age_range" placeholder="e.g., 30-40" />
+    <button type="button" class="mic-button" onclick="startRecognition('age_range')">🎤</button>
 
-    <p><strong>Scroll down to fill out the form ⬇️ Click Submit when done to receive your educational summary.</strong></p>
+    <label>Sex/Gender:</label>
+    <input type="text" name="sex" id="sex" placeholder="e.g., Male/Female/Other" />
+    <button type="button" class="mic-button" onclick="startRecognition('sex')">🎤</button>
+
+    <label>Existing Conditions:</label>
+    <input type="text" name="existing_conditions" id="existing_conditions" placeholder="e.g., Diabetes" />
+    <button type="button" class="mic-button" onclick="startRecognition('existing_conditions')">🎤</button>
+
+    <label>Allergies:</label>
+    <input type="text" name="allergies" id="allergies" />
+    <button type="button" class="mic-button" onclick="startRecognition('allergies')">🎤</button>
+
+    <label>Current Medications:</label>
+    <input type="text" name="medications" id="medications" />
+    <button type="button" class="mic-button" onclick="startRecognition('medications')">🎤</button>
+
+    <label>When did it start?</label>
+    <input type="text" name="onset" id="onset" />
+    <button type="button" class="mic-button" onclick="startRecognition('onset')">🎤</button>
+
+    <label>What makes it better?</label>
+    <input type="text" name="better" id="better" />
+    <button type="button" class="mic-button" onclick="startRecognition('better')">🎤</button>
+
+    <label>What makes it worse?</label>
+    <input type="text" name="worse" id="worse" />
+    <button type="button" class="mic-button" onclick="startRecognition('worse')">🎤</button>
+
+    <label>Severity (1–10):</label>
+    <input type="number" name="severity" id="severity" min="1" max="10" />
+
+    <label>Treatments already tried:</label>
+    <input type="text" name="treatments" id="treatments" />
+    <button type="button" class="mic-button" onclick="startRecognition('treatments')">🎤</button>
+
+    <p><strong>Scroll down ⬇️ and click Submit to receive your Doctor AI summary.</strong></p>
 
     <button type="submit">Submit</button>
   </form>
@@ -130,6 +141,20 @@
   <div class="response">
     <h3>Doctor AI Response:</h3>
     <p>{{ response|safe }}</p>
+
+    <!-- Follow-Up Question Form -->
+    <form action="/followup" method="post">
+      <label for="followup">Have a follow-up question?</label>
+      <input type="text" name="followup" id="followup" placeholder="Ask a clarification question here" required />
+      <button type="submit">Ask Follow-up</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if followup_response %}
+  <div class="response">
+    <h3>Follow-Up Answer:</h3>
+    <p>{{ followup_response|safe }}</p>
   </div>
   {% endif %}
 

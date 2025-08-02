@@ -3,7 +3,7 @@ import openai
 import os
 
 app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # ✅ No fallback!
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
@@ -18,6 +18,7 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
         f"Severity (1-10): {context.get('severity', 'unknown')}",
         f"Treatments Tried: {context.get('treatments', 'unknown')}"
     ])
+
     prompt = (
         f"You are a board-certified family medicine physician writing an educational summary.\n\n"
         f"Patient profile and HPI:\n{context_summary}\n\n"
@@ -30,17 +31,12 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
         f"5. Strong disclaimer that this is educational only\n\n"
         f"Use clear headings and bullet points. Consider timing, severity, and prior treatments to guide the response."
     )
+
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {
-                "role": "system",
-                "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "system", "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."},
+            {"role": "user", "content": prompt}
         ],
         temperature=0.6
     )
@@ -69,5 +65,23 @@ def index():
             output = f"⚠️ Error: {e}"
     return render_template("index.html", response=output)
 
+@app.route("/followup", methods=["POST"])
+def followup():
+    followup_question = request.form.get("followup", "")
+    try:
+        reply = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
+                {"role": "user", "content": f"A patient has a follow-up question:\n\n{followup_question}\n\nPlease answer clearly and briefly, and remind them this is educational only."}
+            ],
+            temperature=0.6
+        )
+        followup_response = reply['choices'][0]['message']['content']
+    except Exception as e:
+        followup_response = f"⚠️ Error: {e}"
+
+    return render_template("index.html", response=followup_response)  # ✅ Changed here
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    app.run(host="0.0.0.0", port=3000, debug=True)
