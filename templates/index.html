@@ -21,7 +21,7 @@
     h1 {
       text-align: center;
       font-size: 24px;
-      margin-top: 5px;
+      margin-top: 10px;
     }
     details {
       background: #fff;
@@ -37,6 +37,7 @@
     label {
       margin-top: 12px;
       display: block;
+      font-weight: bold;
     }
     input[type="text"], input[type="number"], textarea {
       width: 100%;
@@ -46,9 +47,10 @@
       border-radius: 4px;
     }
     .mic-button {
+      margin-top: 5px;
+      margin-bottom: 10px;
       font-size: 1.2em;
       cursor: pointer;
-      margin-left: 5px;
     }
     button {
       margin-top: 20px;
@@ -63,7 +65,7 @@
       background-color: #0056b3;
     }
     .modal {
-      display: flex;
+      display: none;
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -78,16 +80,12 @@
       max-width: 600px;
       max-height: 85%;
       overflow-y: auto;
+      position: relative;
     }
     .close {
       float: right;
       font-size: 1.5rem;
       cursor: pointer;
-    }
-    .instructions {
-      font-weight: bold;
-      margin: 15px 0 5px;
-      font-size: 0.95em;
     }
   </style>
 </head>
@@ -99,81 +97,85 @@
 
   <h1>Doctor AI</h1>
 
-  <p class="instructions">Click each section to complete it. You can type or click 🎤 to speak. Press <strong>Enter</strong> after each entry to move to the next field.</p>
+  <p><strong>Click each section to open it. You can type or click 🎤 to speak. Press Enter to move to the next field.</strong></p>
 
   <form method="POST">
     <details open>
-      <summary>Step 1: Describe your main concern</summary>
+      <summary>Symptoms</summary>
       <label for="symptoms">Describe your symptoms:</label>
-      <p style="font-size: 0.9em; color: gray;">The more detail you provide, the more specific and helpful your summary will be.</p>
+      <p style="font-size: 0.9em; color: #555;">Be specific: include timing, severity, triggers, and any associated symptoms.</p>
       <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
       <span class="mic-button" onclick="startRecognition('symptoms')">🎤</span>
     </details>
 
     <details>
-      <summary>Step 2: Tell us about yourself</summary>
-      <label>Age Range:</label>
-      <input type="text" name="age_range" id="age_range" placeholder="e.g., 30–40">
+      <summary>Basic Information</summary>
+      <label for="age_range">Age Range:</label>
+      <input type="text" name="age_range" id="age_range" placeholder="e.g., 30-40"/>
       <span class="mic-button" onclick="startRecognition('age_range')">🎤</span>
 
-      <label>Sex:</label>
-      <input type="text" name="sex" id="sex" placeholder="e.g., Male, Female">
+      <label for="sex">Sex:</label>
+      <input type="text" name="sex" id="sex" placeholder="e.g., Male/Female/Other"/>
       <span class="mic-button" onclick="startRecognition('sex')">🎤</span>
     </details>
 
     <details>
-      <summary>Step 3: Your medical history</summary>
-      <label>Existing Conditions (What are your current medical problems?):</label>
-      <input type="text" name="existing_conditions" id="existing_conditions">
+      <summary>Medical History</summary>
+      <label for="existing_conditions">Existing Conditions (What are your current medical problems?):</label>
+      <input type="text" name="existing_conditions" id="existing_conditions"/>
       <span class="mic-button" onclick="startRecognition('existing_conditions')">🎤</span>
 
-      <label>Allergies:</label>
-      <input type="text" name="allergies" id="allergies">
+      <label for="allergies">Allergies:</label>
+      <input type="text" name="allergies" id="allergies"/>
       <span class="mic-button" onclick="startRecognition('allergies')">🎤</span>
 
-      <label>Medications:</label>
-      <input type="text" name="medications" id="medications">
+      <label for="medications">Medications (currently taking):</label>
+      <input type="text" name="medications" id="medications"/>
       <span class="mic-button" onclick="startRecognition('medications')">🎤</span>
     </details>
 
     <details>
-      <summary>Step 4: More details about symptoms</summary>
-      <label>Onset (When did symptoms start?):</label>
-      <input type="text" name="onset" id="onset">
+      <summary>Symptom Details</summary>
+      <label for="onset">Onset (When did symptoms start?):</label>
+      <input type="text" name="onset" id="onset"/>
       <span class="mic-button" onclick="startRecognition('onset')">🎤</span>
 
-      <label>What makes it better?</label>
-      <input type="text" name="better" id="better">
+      <label for="better">Better (What makes symptoms better?):</label>
+      <input type="text" name="better" id="better"/>
       <span class="mic-button" onclick="startRecognition('better')">🎤</span>
 
-      <label>What makes it worse?</label>
-      <input type="text" name="worse" id="worse">
+      <label for="worse">Worse (What makes symptoms worse?):</label>
+      <input type="text" name="worse" id="worse"/>
       <span class="mic-button" onclick="startRecognition('worse')">🎤</span>
 
-      <label>Severity (1–10 where 10 is most severe):</label>
-      <input type="number" name="severity" id="severity" min="1" max="10">
+      <label for="severity">Severity (1–10 where 10 is most severe):</label>
+      <input type="number" name="severity" id="severity" min="1" max="10"/>
       <span class="mic-button" onclick="startRecognition('severity')">🎤</span>
 
-      <label>Treatments tried:</label>
-      <input type="text" name="treatments" id="treatments">
+      <label for="treatments">Treatments Tried (e.g., Tylenol, rest):</label>
+      <input type="text" name="treatments" id="treatments"/>
       <span class="mic-button" onclick="startRecognition('treatments')">🎤</span>
     </details>
 
-    <p class="instructions">✅ Please complete all the above fields to get a customized summary.<br>
-    ⏳ After you click Submit, Dr. AI will review your case and deliver your summary shortly—he’s fast but thorough!</p>
+    <p style="margin-top:20px; font-size: 0.95em;">
+      <strong>✅ Please make sure you complete all fields above to receive a customized summary.</strong><br>
+      ⏳ After you click submit, please wait a few moments.<br>
+      🧠 <em>Dr. AI is reviewing your medical history and preparing your summary…</em>
+    </p>
 
     <button type="submit">Submit</button>
   </form>
 
   {% if response %}
-  <div class="modal" style="display:flex;">
+  <div class="modal" style="display:flex;" id="responseModal">
     <div class="modal-content">
-      <span class="close" onclick="this.parentElement.parentElement.style.display='none';">&times;</span>
-      <h3>🩺 Doctor AI Summary:</h3>
+      <span class="close" onclick="document.getElementById('responseModal').style.display='none';">&times;</span>
+      <h3>Doctor AI Summary:</h3>
       <p>{{ response|safe }}</p>
-      <form action="/followup" method="post" style="margin-top:20px;">
-        <label for="followup"><strong>Have a follow-up question?</strong></label>
-        <textarea name="followup" id="followup" rows="3" placeholder="Ask a follow-up..."></textarea>
+
+      <form method="POST" action="/followup">
+        <label for="followup">Have a follow-up question?</label>
+        <textarea name="followup" id="followup" rows="2" placeholder="Ask for clarification or additional info..."></textarea>
         <span class="mic-button" onclick="startRecognition('followup')">🎤</span>
         <button type="submit">Submit Follow-up Question</button>
       </form>
@@ -189,16 +191,24 @@
       recognition.start();
       recognition.onresult = function(event) {
         field.value += (field.value ? ' ' : '') + event.results[0][0].transcript;
+        field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      };
+      recognition.onerror = function(event) {
+        alert("Speech recognition error: " + event.error);
       };
     }
 
-    // Enter to auto-scroll
-    document.querySelectorAll("input, textarea").forEach((field, index, fields) => {
-      field.addEventListener("keydown", function(e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const next = fields[index + 1];
-          if (next) next.focus();
+    // Auto-scroll to next field on Enter
+    const fields = document.querySelectorAll('input, textarea');
+    fields.forEach((field, index) => {
+      field.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const nextField = fields[index + 1];
+          if (nextField) {
+            nextField.focus();
+            nextField.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         }
       });
     });
