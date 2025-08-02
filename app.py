@@ -5,6 +5,7 @@ import os
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Generate main summary
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -29,55 +30,69 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
         f"3. Home/lifestyle measures\n"
         f"4. Red flags requiring urgent care\n"
         f"5. Strong disclaimer that this is educational only\n\n"
-        f"Use clear headings and bullet points. Consider timing, severity, and prior treatments to guide the response."
+        f"Use clear headings and bullet points. Consider timing, severity, and prior treatments."
     )
 
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
         ],
         temperature=0.6
     )
     return response['choices'][0]['message']['content']
 
+# Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
     output = ""
-    followup_mode = False
     if request.method == "POST":
-        if request.form.get("followup"):
-            followup_mode = True
-            followup_question = request.form.get("followup", "")
-            try:
-                reply = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
-                        {"role": "user", "content": f"A patient has a follow-up question:\n\n{followup_question}\n\nPlease answer clearly and briefly, and remind them this is educational only."}
-                    ],
-                    temperature=0.6
-                )
-                output = reply['choices'][0]['message']['content']
-            except Exception as e:
-                output = f"⚠️ Error: {e}"
-        else:
-            symptoms = request.form.get("symptoms", "")
-            context = {
-                "age_range": request.form.get("age_range", "skip"),
-                "sex": request.form.get("sex", "skip"),
-                "existing_conditions": request.form.get("existing_conditions", "skip"),
-                "allergies": request.form.get("allergies", "skip"),
-                "medications": request.form.get("medications", "skip"),
-                "onset": request.form.get("onset", "unknown"),
-                "better": request.form.get("better", "unknown"),
-                "worse": request.form.get("worse", "unknown"),
-                "severity": request.form.get("severity", "unknown"),
-                "treatments": request.form.get("treatments", "unknown"),
-            }
-            try:
-                output = ask_chatgpt(symptoms, context)
-            except Exception as e:
-                output = f"⚠️ Error: {e}"
-    return render_template("index.html", response=output, followup=followup_mode)
+        symptoms = request.form.get("symptoms", "")
+        context = {
+            "age_range": request.form.get("age_range", "skip"),
+            "sex": request.form.get("sex", "skip"),
+            "existing_conditions": request.form.get("existing_conditions", "skip"),
+            "allergies": request.form.get("allergies", "skip"),
+            "medications": request.form.get("medications", "skip"),
+            "onset": request.form.get("onset", "unknown"),
+            "better": request.form.get("better", "unknown"),
+            "worse": request.form.get("worse", "unknown"),
+            "severity": request.form.get("severity", "unknown"),
+            "treatments": request.form.get("treatments", "unknown"),
+        }
+        try:
+            output = ask_chatgpt(symptoms, context)
+        except Exception as e:
+            output = f"⚠️ Error: {e}"
+    return render_template("index.html", response=output)
+
+# Follow-up route
+@app.route("/followup", methods=["POST"])
+def followup():
+    followup_question = request.form.get("followup", "")
+    try:
+        reply = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."
+                },
+                {
+                    "role": "user",
+                    "content": f"A patient has a follow-up question:\n\n{followup_question}\n\nPlease answer clearly and briefly, and remind them this is educational only."
+                }
+            ],
+            temperature=0.6
+        )
+        followup_response = reply['choices'][0]['message']['content']
+    except Exception as e:
+        followup_response = f"⚠️ Error: {e}"
+    return render_template("index.html", response=followup_response)
