@@ -14,7 +14,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
     }
     .header img {
       height: 60px;
@@ -22,13 +21,12 @@
     h1 {
       text-align: center;
       font-size: 24px;
-      margin-top: 5px;
+      margin-top: 10px;
     }
     p.instructions {
-      text-align: center;
       font-size: 0.95em;
-      color: #444;
-      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
     }
     details {
       background: #fff;
@@ -40,7 +38,6 @@
     summary {
       font-weight: bold;
       cursor: pointer;
-      font-size: 1.1em;
     }
     label {
       margin-top: 12px;
@@ -71,36 +68,57 @@
     button:hover {
       background-color: #0056b3;
     }
-    .response {
-      margin-top: 30px;
-      background-color: #e9f5ff;
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #e9f5ff;
       padding: 20px;
-      border-left: 5px solid #007bff;
-      white-space: pre-line;
-      border-radius: 5px;
+      border-radius: 10px;
+      max-width: 700px;
+      max-height: 90%;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .close {
+      float: right;
+      font-size: 1.5rem;
+      cursor: pointer;
+      position: absolute;
+      top: 10px;
+      right: 15px;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor">
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor Photo">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
   </div>
 
   <h1>Doctor AI</h1>
-  <p class="instructions">Click each section to complete it. You may type or click the 🎤 icon to speak your answers.</p>
+  <p class="instructions"><strong>Click on each section below to complete it. You can type in your answers or use the 🎤 microphone icon to speak.</strong></p>
 
   <form method="POST">
     <details open>
-      <summary>Step 1: Describe your main concern</summary>
+      <summary>Symptoms</summary>
       <label for="symptoms">Describe your symptoms:</label>
-      <p style="font-size: 0.9em; color: #555;"><strong>The more detail you provide about symptoms and related conditions, the more specific your summary will be.</strong></p>
+      <p style="font-size: 0.9em; color: #555;">Include timing, severity, location, and any associated symptoms. The more detail, the better the summary.</p>
       <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
       <span class="mic-button" onclick="startRecognition('symptoms')">🎤</span>
     </details>
 
     <details>
-      <summary>Step 2: Tell us about yourself</summary>
+      <summary>Basic Information</summary>
       <label for="age_range">Age Range:</label>
       <input type="text" name="age_range" id="age_range" placeholder="e.g., 30-40"/>
       <span class="mic-button" onclick="startRecognition('age_range')">🎤</span>
@@ -111,7 +129,7 @@
     </details>
 
     <details>
-      <summary>Step 3: Your medical history</summary>
+      <summary>Medical History</summary>
       <label for="existing_conditions">Existing Conditions (What are your current medical problems?):</label>
       <input type="text" name="existing_conditions" id="existing_conditions"/>
       <span class="mic-button" onclick="startRecognition('existing_conditions')">🎤</span>
@@ -120,13 +138,13 @@
       <input type="text" name="allergies" id="allergies"/>
       <span class="mic-button" onclick="startRecognition('allergies')">🎤</span>
 
-      <label for="medications">Medications (currently taking):</label>
+      <label for="medications">Medications:</label>
       <input type="text" name="medications" id="medications"/>
       <span class="mic-button" onclick="startRecognition('medications')">🎤</span>
     </details>
 
     <details>
-      <summary>Step 4: More details about symptoms</summary>
+      <summary>Symptom Details</summary>
       <label for="onset">Onset (When did symptoms start?):</label>
       <input type="text" name="onset" id="onset"/>
       <span class="mic-button" onclick="startRecognition('onset')">🎤</span>
@@ -139,40 +157,43 @@
       <input type="text" name="worse" id="worse"/>
       <span class="mic-button" onclick="startRecognition('worse')">🎤</span>
 
-      <label for="severity">Severity (1–10 where 10 is most severe):</label>
+      <label for="severity">Severity (1–10):</label>
       <input type="number" name="severity" id="severity" min="1" max="10"/>
       <span class="mic-button" onclick="startRecognition('severity')">🎤</span>
 
-      <label for="treatments">Treatments tried (e.g., Tylenol, rest):</label>
+      <label for="treatments">Treatments Tried (What have you tried?):</label>
       <input type="text" name="treatments" id="treatments"/>
       <span class="mic-button" onclick="startRecognition('treatments')">🎤</span>
     </details>
 
-    <p style="font-size: 0.95em;">
-      ✅ <strong>Please make sure you’ve filled out each section.</strong><br>
-      ⏳ After clicking Submit, please wait a few moments for your summary.
+    <p style="margin-top:20px; font-size: 0.95em;">
+      ✅ <strong>Please complete all fields as thoroughly as possible.</strong><br>
+      ⏳ <strong>After clicking Submit, please wait a few moments to receive your summary.</strong>
     </p>
 
     <button type="submit">Submit</button>
   </form>
 
   {% if response %}
-  <div class="response">
-    <h3>Doctor AI Summary:</h3>
-    <p>{{ response|safe }}</p>
+  <div class="modal" style="display:flex;">
+    <div class="modal-content">
+      <span class="close" onclick="this.parentElement.parentElement.style.display='none';">&times;</span>
+      <h3>Doctor AI Summary:</h3>
+      <p>{{ response|safe }}</p>
 
-    <form method="POST" action="/followup">
-      <label for="followup"><strong>Have a follow-up question?</strong></label>
-      <textarea name="followup" id="followup" rows="3" placeholder="Ask your follow-up question here..."></textarea>
-      <span class="mic-button" onclick="startRecognition('followup')">🎤</span>
-      <button type="submit">Submit Follow-up Question</button>
-    </form>
+      <form method="POST" action="/followup" style="margin-top: 20px;">
+        <label for="followup"><strong>Have a follow-up question?</strong></label>
+        <textarea name="followup" id="followup" rows="3" placeholder="Ask your follow-up question here..."></textarea>
+        <span class="mic-button" onclick="startRecognition('followup')">🎤</span>
+        <button type="submit">Submit Follow-up Question</button>
+      </form>
+    </div>
   </div>
   {% endif %}
 
   <script>
-    function startRecognition(fieldId) {
-      const field = document.getElementById(fieldId);
+    function startRecognition(id) {
+      const field = document.getElementById(id);
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-US';
       recognition.start();
