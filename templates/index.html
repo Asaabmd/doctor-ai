@@ -93,7 +93,7 @@
   <h1>Doctor AI</h1>
 
   <div class="guidance">
-    ✅ Please provide as much detail as possible. The more specific your symptom descriptions and associated medical history, the more helpful and customized your summary will be.
+    💬 You may either type in the fields or click the 🎤 icon to use speech-to-text. The more detailed your answers, the better your custom summary will be.
   </div>
 
   <form method="POST">
@@ -171,7 +171,8 @@
 
       <form method="POST" action="/followup" style="margin-top: 20px;">
         <label for="followup">Have a follow-up question?</label>
-        <textarea name="followup" rows="3" placeholder="Ask for clarification or more info..."></textarea>
+        <textarea name="followup" id="followup" rows="3" placeholder="Ask for clarification or more info..."></textarea>
+        <span class="mic-button" onclick="startRecognition('followup')">🎤</span>
         <button type="submit">Submit Follow-up Question</button>
       </form>
     </div>
@@ -188,6 +189,7 @@
       recognition.onresult = function(event) {
         field.value += (field.value ? ' ' : '') + event.results[0][0].transcript;
       };
+
       recognition.onerror = function(event) {
         alert("Speech recognition error: " + event.error);
       };
