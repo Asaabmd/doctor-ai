@@ -1,181 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Doctor AI</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
-    h1 {
-      text-align: center;
-      font-size: 24px;
-      margin-top: 10px;
-    }
-    details {
-      background: #fff;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    summary {
-      font-weight: bold;
-      cursor: pointer;
-    }
-    label {
-      margin-top: 12px;
-      display: block;
-    }
-    input[type="text"], input[type="number"], textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .mic-button {
-      margin-top: 5px;
-      margin-bottom: 10px;
-      font-size: 1.2em;
-      cursor: pointer;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 600px;
-      max-height: 80%;
-      overflow-y: auto;
-    }
-    .close {
-      float: right;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header img {
+            height: 60px;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 24px;
+        }
+        details {
+            background-color: white;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 10px;
+        }
+        summary {
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            margin-top: 20px;
+            background-color: #e9f5ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            white-space: pre-line;
+        }
+        .mic {
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Doctor AI</h1>
-  <p><strong>Click each section below to enter your information. Use the 🎤 icon to speak instead of typing.</strong></p>
-  
-  <form method="POST">
-    <details open>
-      <summary>Symptoms</summary>
-      <label for="symptoms">Describe your symptoms:</label>
-      <p style="font-size: 0.9em; color: #555;">Please include timing, severity, location, and associated symptoms. The more detail, the better the educational evaluation.</p>
-      <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
-      <span class="mic-button" onclick="startRecognition('symptoms')">🎤</span>
-    </details>
-
-    <details>
-      <summary>Basic Information</summary>
-      <label for="age_range">Age Range:</label>
-      <input type="text" name="age_range" id="age_range" placeholder="e.g., 30-40"/>
-      <span class="mic-button" onclick="startRecognition('age_range')">🎤</span>
-
-      <label for="sex">Sex:</label>
-      <input type="text" name="sex" id="sex" placeholder="e.g., Male/Female/Other"/>
-      <span class="mic-button" onclick="startRecognition('sex')">🎤</span>
-    </details>
-
-    <details>
-      <summary>Medical History</summary>
-      <label for="existing_conditions">Existing Conditions (what are your current medical problems?):</label>
-      <input type="text" name="existing_conditions" id="existing_conditions"/>
-      <span class="mic-button" onclick="startRecognition('existing_conditions')">🎤</span>
-
-      <label for="allergies">Allergies:</label>
-      <input type="text" name="allergies" id="allergies"/>
-      <span class="mic-button" onclick="startRecognition('allergies')">🎤</span>
-
-      <label for="medications">Medications (currently taking):</label>
-      <input type="text" name="medications" id="medications"/>
-      <span class="mic-button" onclick="startRecognition('medications')">🎤</span>
-    </details>
-
-    <details>
-      <summary>Symptom Details</summary>
-      <label for="onset">Onset (when did symptoms start?):</label>
-      <input type="text" name="onset" id="onset"/>
-      <span class="mic-button" onclick="startRecognition('onset')">🎤</span>
-
-      <label for="better">Better (what makes symptoms better?):</label>
-      <input type="text" name="better" id="better"/>
-      <span class="mic-button" onclick="startRecognition('better')">🎤</span>
-
-      <label for="worse">Worse (what makes symptoms worse?):</label>
-      <input type="text" name="worse" id="worse"/>
-      <span class="mic-button" onclick="startRecognition('worse')">🎤</span>
-
-      <label for="severity">Severity (1–10, where 10 is most severe):</label>
-      <input type="number" name="severity" id="severity" min="1" max="10"/>
-      <span class="mic-button" onclick="startRecognition('severity')">🎤</span>
-
-      <label for="treatments">Treatments Tried (e.g., Tylenol, rest):</label>
-      <input type="text" name="treatments" id="treatments"/>
-      <span class="mic-button" onclick="startRecognition('treatments')">🎤</span>
-    </details>
-
-    <button type="submit">Submit</button>
-  </form>
-
-  <!-- Modal popup for summary -->
-  {% if response %}
-  <div class="modal" style="display:flex;">
-    <div class="modal-content">
-      <span class="close" onclick="this.parentElement.parentElement.style.display='none';">&times;</span>
-      <h3>Doctor AI Summary:</h3>
-      <p>{{ response|safe }}</p>
+    <div class="header">
+        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor Image">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
     </div>
-  </div>
-  {% endif %}
 
-  <!-- Follow-up form -->
-  <form method="POST" action="/followup" style="margin-top: 30px;">
-    <label for="followup"><strong>Have a follow-up question?</strong></label>
-    <textarea name="followup" id="followup" rows="2" placeholder="Ask for clarification or additional information..."></textarea>
-    <button type="submit">Submit Follow-up</button>
-  </form>
+    <h1>Doctor AI</h1>
 
-  <script>
-    function startRecognition(id) {
-      const field = document.getElementById(id);
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'en-US';
-      recognition.start();
-      recognition.onresult = function(event) {
-        field.value += (field.value ? ' ' : '') + event.results[0][0].transcript;
-      };
-      recognition.onerror = function(event) {
-        alert("Speech recognition error: " + event.error);
-      };
-    }
-  </script>
+    <form method="POST">
+        <details open>
+            <summary>Step 1: Describe your main concern</summary>
+            <label for="symptoms">Describe your symptoms:</label>
+            <p style="font-size: 0.9em; color: gray;">Be specific — include timing, severity, triggers, etc.</p>
+            <textarea name="symptoms" rows="4" required></textarea>
+        </details>
+
+        <details>
+            <summary>Step 2: Tell us about yourself</summary>
+            <label>Age Range:</label>
+            <input type="text" name="age_range" placeholder="e.g., 30–40">
+            <span class="mic" onclick="startRecognition('age')">🎤</span>
+
+            <label>Sex:</label>
+            <input type="text" name="sex" placeholder="e.g., Male, Female">
+            <span class="mic" onclick="startRecognition('sex')">🎤</span>
+        </details>
+
+        <details>
+            <summary>Step 3: Your medical history</summary>
+            <label>Existing Conditions (What are your current medical problems?):</label>
+            <input type="text" name="existing_conditions">
+            <span class="mic" onclick="startRecognition('existing_conditions')">🎤</span>
+
+            <label>Allergies:</label>
+            <input type="text" name="allergies">
+            <span class="mic" onclick="startRecognition('allergies')">🎤</span>
+
+            <label>Medications:</label>
+            <input type="text" name="medications">
+            <span class="mic" onclick="startRecognition('medications')">🎤</span>
+        </details>
+
+        <details>
+            <summary>Step 4: More details about symptoms</summary>
+            <label>Onset (When did symptoms start?):</label>
+            <input type="text" name="onset">
+            <span class="mic" onclick="startRecognition('onset')">🎤</span>
+
+            <label>What makes it better?</label>
+            <input type="text" name="better">
+            <span class="mic" onclick="startRecognition('better')">🎤</span>
+
+            <label>What makes it worse?</label>
+            <input type="text" name="worse">
+            <span class="mic" onclick="startRecognition('worse')">🎤</span>
+
+            <label>Severity (1–10 where 10 is most severe):</label>
+            <input type="number" name="severity" min="1" max="10">
+            <span class="mic" onclick="startRecognition('severity')">🎤</span>
+
+            <label>Treatments tried (What treatments have you tried?):</label>
+            <input type="text" name="treatments">
+            <span class="mic" onclick="startRecognition('treatments')">🎤</span>
+        </details>
+
+        <p style="margin-top:20px; font-size: 0.95em;">
+            ✅ <strong>Please make sure that you have completed all the above fields to the best of your ability.</strong><br>
+            ⏳ After you click Submit, please wait a few moments to receive your custom educational summary.
+        </p>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if response %}
+    <div class="response">
+        <h3>Doctor AI Summary:</h3>
+        <p>{{ response|safe }}</p>
+
+        <form action="/followup" method="post" style="margin-top:20px;">
+            <label for="followup">Have a follow-up question?</label>
+            <textarea name="followup" rows="3" placeholder="Type your follow-up question here..."></textarea>
+            <button type="submit">Submit Follow-up Question</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <script>
+        function startRecognition(fieldName) {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                const fields = document.getElementsByName(fieldName);
+                if (fields.length) {
+                    const field = fields[0];
+                    field.value += (field.value ? ' ' : '') + transcript;
+                }
+            };
+
+            recognition.onerror = function(event) {
+                alert('Speech recognition error: ' + event.error);
+            };
+        }
+    </script>
 </body>
 </html>
