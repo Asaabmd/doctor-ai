@@ -30,11 +30,14 @@
       padding: 20px;
       margin-top: 10px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     label {
       display: block;
       margin-top: 12px;
+    }
+    .field-wrapper {
+      position: relative;
     }
     input[type="text"],
     input[type="number"],
@@ -44,6 +47,16 @@
       margin-top: 4px;
       border: 1px solid #ccc;
       border-radius: 4px;
+    }
+    .mic-btn {
+      position: absolute;
+      right: 10px;
+      top: 36px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #007bff;
     }
     button {
       margin-top: 20px;
@@ -57,104 +70,97 @@
     button:hover {
       background-color: #0056b3;
     }
-    .response {
-      margin-top: 20px;
-      background-color: #e9f5ff;
-      padding: 15px;
-      border-left: 4px solid #007bff;
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
     }
-    .mic-button {
-      margin-top: 5px;
-      background: none;
-      border: none;
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 18px;
-      color: #555;
     }
-    .mic-button:hover {
-      color: #000;
+
+    .tip {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: -5px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image" />
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" />
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor AI Image">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
   </div>
-
   <h1>Doctor AI</h1>
 
   <form method="POST">
     <label for="symptoms">Describe your symptoms:</label>
-    <p style="font-size: 0.9rem; color: #555; margin-top: -5px; margin-bottom: 10px;">
-      Please be as specific as possible. Include timing, severity, location, and associated symptoms.<br>
-      <strong>Click the 🎤 icon to speak instead of typing.</strong>
-    </p>
-    <textarea name="symptoms" id="symptoms" rows="4" required></textarea>
-    <button type="button" class="mic-button" onclick="startRecognition('symptoms')">🎤</button>
+    <p class="tip">Please be as specific as possible. Click the 🎤 to speak. The more detail you provide, the better the summary.</p>
+    <div class="field-wrapper">
+      <textarea id="symptoms" name="symptoms" rows="4" required></textarea>
+      <button type="button" class="mic-btn" onclick="startRecognition('symptoms')">🎤</button>
+    </div>
 
-    <label>Age range:</label>
-    <input type="text" name="age_range" id="age_range" placeholder="e.g., 30-40" />
-    <button type="button" class="mic-button" onclick="startRecognition('age_range')">🎤</button>
+    {% for field in ["age_range", "sex", "existing_conditions", "allergies", "medications", "onset", "better", "worse", "severity", "treatments"] %}
+    <label for="{{ field }}">{{ field.replace("_", " ").title() }}:</label>
+    <div class="field-wrapper">
+      <input
+        id="{{ field }}"
+        type="{{ 'number' if field == 'severity' else 'text' }}"
+        name="{{ field }}"
+        placeholder="Enter {{ field.replace('_', ' ') }}"
+        {% if field == 'severity' %}min="1" max="10"{% endif %}
+      />
+      <button type="button" class="mic-btn" onclick="startRecognition('{{ field }}')">🎤</button>
+    </div>
+    {% endfor %}
 
-    <label>Sex/Gender:</label>
-    <input type="text" name="sex" id="sex" placeholder="e.g., Male/Female/Other" />
-    <button type="button" class="mic-button" onclick="startRecognition('sex')">🎤</button>
-
-    <label>Existing Conditions:</label>
-    <input type="text" name="existing_conditions" id="existing_conditions" placeholder="e.g., Diabetes" />
-    <button type="button" class="mic-button" onclick="startRecognition('existing_conditions')">🎤</button>
-
-    <label>Allergies:</label>
-    <input type="text" name="allergies" id="allergies" />
-    <button type="button" class="mic-button" onclick="startRecognition('allergies')">🎤</button>
-
-    <label>Current Medications:</label>
-    <input type="text" name="medications" id="medications" />
-    <button type="button" class="mic-button" onclick="startRecognition('medications')">🎤</button>
-
-    <label>When did it start?</label>
-    <input type="text" name="onset" id="onset" />
-    <button type="button" class="mic-button" onclick="startRecognition('onset')">🎤</button>
-
-    <label>What makes it better?</label>
-    <input type="text" name="better" id="better" />
-    <button type="button" class="mic-button" onclick="startRecognition('better')">🎤</button>
-
-    <label>What makes it worse?</label>
-    <input type="text" name="worse" id="worse" />
-    <button type="button" class="mic-button" onclick="startRecognition('worse')">🎤</button>
-
-    <label>Severity (1–10):</label>
-    <input type="number" name="severity" id="severity" min="1" max="10" />
-
-    <label>Treatments already tried:</label>
-    <input type="text" name="treatments" id="treatments" />
-    <button type="button" class="mic-button" onclick="startRecognition('treatments')">🎤</button>
-
-    <p><strong>Scroll down ⬇️ and click Submit to receive your Doctor AI summary.</strong></p>
-
+    <p><strong>Click Submit when done to receive your educational summary.</strong></p>
     <button type="submit">Submit</button>
   </form>
 
   {% if response %}
-  <div class="response">
-    <h3>Doctor AI Response:</h3>
-    <p>{{ response|safe }}</p>
-
-    <!-- Follow-Up Question Form -->
-    <form action="/followup" method="post">
-      <label for="followup">Have a follow-up question?</label>
-      <input type="text" name="followup" id="followup" placeholder="Ask a clarification question here" required />
-      <button type="submit">Ask Follow-up</button>
-    </form>
+  <div id="responseModal" class="modal" style="display:block;">
+    <div class="modal-content">
+      <span class="close" onclick="document.getElementById('responseModal').style.display='none'">&times;</span>
+      <h3>Doctor AI Summary</h3>
+      <p>{{ response|safe }}</p>
+      <form action="/followup" method="POST" style="margin-top: 20px;">
+        <label for="followup">Have a follow-up question?</label>
+        <textarea name="followup" rows="2" placeholder="Type your question here..."></textarea>
+        <button type="submit">Ask</button>
+      </form>
+    </div>
   </div>
   {% endif %}
 
   {% if followup_response %}
-  <div class="response">
-    <h3>Follow-Up Answer:</h3>
-    <p>{{ followup_response|safe }}</p>
+  <div class="modal" id="followupModal" style="display:block;">
+    <div class="modal-content">
+      <span class="close" onclick="document.getElementById('followupModal').style.display='none'">&times;</span>
+      <h3>Follow-Up Answer</h3>
+      <p>{{ followup_response|safe }}</p>
+    </div>
   </div>
   {% endif %}
 
@@ -179,6 +185,16 @@
         alert('Speech recognition error: ' + event.error);
       };
     }
+
+    window.onclick = function(event) {
+      const modals = ["responseModal", "followupModal"];
+      modals.forEach(id => {
+        const modal = document.getElementById(id);
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      });
+    };
   </script>
 </body>
 </html>
