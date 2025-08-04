@@ -23,6 +23,21 @@
       font-size: 24px;
       margin: 10px 0;
     }
+    .access-message {
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .access-message.unlimited {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .access-message.limited {
+      background-color: #fff3cd;
+      color: #856404;
+    }
     details {
       background: #fff;
       border-radius: 8px;
@@ -98,6 +113,17 @@
   </div>
 
   <h1>Doctor AI</h1>
+
+  {% if request.cookies.get('access_granted') %}
+  <div class="access-message unlimited">
+    ✅ Welcome back! You have unlimited access.
+  </div>
+  {% else %}
+  <div class="access-message limited">
+    🔒 This is a one-time free session. Subscribe to get unlimited access.
+  </div>
+  {% endif %}
+
   <p><strong>Click each section to expand and complete it. You can type or click 🎤 to use voice input. Press Enter to move to the next field.</strong></p>
   <p><strong>Please make sure you complete all fields for a customized summary. After clicking submit, wait a few moments...</strong><br>
   🧠 <em>Dr. AI is reviewing your medical history and will prepare your summary shortly!</em></p>
