@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔍 Function to generate summary using GPT
+# 🔍 Generate main summary using GPT
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -52,17 +52,18 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
 # 🏠 Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Step 1: If Payhip provides access via URL param
+    # Step 1: Payhip redirect adds permanent access cookie
     if request.args.get("access") == "granted":
         resp = make_response(render_template("index.html", response=""))
         resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)  # 1 year
         return resp
 
+    # Step 2: Get cookies
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
 
-    # Step 2: Restrict non-subscribers to one-time use
-    if not has_access and use_count >= 1 and request.method == "POST":
+    # ✅ Step 3: Restrict after 1 free use
+    if not has_access and use_count >= 1:
         return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
 
     output = ""
@@ -86,16 +87,15 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        resp = make_response(render_template("index.html", response=output))
-
+        # ✅ Step 4: Track use for non-subscribers
         if not has_access:
+            resp = make_response(render_template("index.html", response=output))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)  # 30 days
-        return resp
+            return resp
 
-    # Step 3: On initial GET
-    return render_template("index.html", response="")
+    return render_template("index.html", response=output)
 
-# ➕ Follow-up question route
+# ➕ Follow-up route
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
