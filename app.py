@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔍 Generate main summary using GPT
+# 🔍 Function to generate summary using GPT
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -49,22 +49,22 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
-# 🏠 Main route with Payhip cookie access + one-time use limit
+# 🏠 Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Step 1: Check for Payhip redirect link (?access=granted)
+    # Step 1: Payhip redirect adds cookie if ?access=granted
     if request.args.get("access") == "granted":
         resp = make_response(render_template("index.html", response=""))
-        resp.set_cookie("access_granted", "true", max_age=60*60*24*365)  # 1 year
+        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)  # 1 year
         return resp
 
-    # Step 2: Check cookies
+    # Step 2: Check access cookie and usage count
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
 
-    # Step 3: Enforce free use limit
-    if not has_access and use_count >= 1:
-        return render_template("index.html", response="🔒 This free version allows only one educational summary. Please subscribe for unlimited access.")
+    # Step 3: Block repeat use if not subscribed
+    if not has_access and use_count >= 1 and request.method == "POST":
+        return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
 
     output = ""
     if request.method == "POST":
@@ -87,15 +87,16 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        # Step 4: Save use count if user is not subscribed
+        # Step 4: If not subscribed, increment use count
         if not has_access:
             resp = make_response(render_template("index.html", response=output))
-            resp.set_cookie("use_count", str(use_count + 1), max_age=60*60*24*30)  # 30 days
+            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)  # 30 days
             return resp
 
+    # Step 5: If not POST or subscribed, show page
     return render_template("index.html", response=output)
 
-# ➕ Follow-up route
+# ➕ Follow-up question route
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
