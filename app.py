@@ -49,22 +49,22 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
-# 🏠 Main route with access control
+# 🏠 Main route with Payhip cookie access + one-time use limit
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Step 1: Handle Payhip redirect (e.g., ?access=granted)
+    # Step 1: Check for Payhip redirect link (?access=granted)
     if request.args.get("access") == "granted":
         resp = make_response(render_template("index.html", response=""))
         resp.set_cookie("access_granted", "true", max_age=60*60*24*365)  # 1 year
         return resp
 
-    # Step 2: Check for access cookie
+    # Step 2: Check cookies
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
 
-    # Step 3: Limit free users to one use
+    # Step 3: Enforce free use limit
     if not has_access and use_count >= 1:
-        return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
+        return render_template("index.html", response="🔒 This free version allows only one educational summary. Please subscribe for unlimited access.")
 
     output = ""
     if request.method == "POST":
@@ -87,7 +87,7 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        # Step 4: Track use if not subscribed
+        # Step 4: Save use count if user is not subscribed
         if not has_access:
             resp = make_response(render_template("index.html", response=output))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60*60*24*30)  # 30 days
@@ -95,7 +95,7 @@ def index():
 
     return render_template("index.html", response=output)
 
-# ➕ Follow-up question route
+# ➕ Follow-up route
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
