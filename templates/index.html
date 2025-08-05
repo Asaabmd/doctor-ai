@@ -7,163 +7,163 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 40px;
       background-color: #f9f9f9;
+      padding: 20px;
     }
-
-    .top-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .top-header img {
-      height: 60px;
-    }
-
     h2 {
-      color: #004d99;
-      flex-grow: 1;
-      text-align: center;
+      color: #003366;
     }
-
-    .section {
-      margin-bottom: 20px;
-    }
-
-    .mic-icon {
-      margin-left: 10px;
+    .accordion {
+      background-color: #e6f0ff;
+      color: #003366;
       cursor: pointer;
+      padding: 15px;
+      width: 100%;
+      border: none;
+      outline: none;
+      text-align: left;
+      transition: 0.4s;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-weight: bold;
     }
-
+    .accordion:after {
+      content: '\25BC';
+      float: right;
+    }
+    .accordion.active:after {
+      content: "\25B2";
+    }
+    .panel {
+      padding: 10px 15px;
+      background-color: white;
+      display: none;
+      overflow: hidden;
+      border-radius: 5px;
+      border: 1px solid #cce0ff;
+    }
     .notice {
-      background-color: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 10px;
+      background-color: #e6f0ff;
+      border: 1px solid #99c2ff;
+      color: #003366;
+      padding: 15px;
       margin-bottom: 15px;
       border-radius: 5px;
-      color: #856404;
+      font-size: 14px;
     }
-
+    .mic-icon {
+      cursor: pointer;
+      margin-left: 8px;
+    }
     .submit-btn {
       background-color: #007bff;
       color: white;
-      padding: 10px 16px;
+      padding: 10px 20px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      margin-top: 10px;
     }
-
     .submit-btn:hover {
       background-color: #0056b3;
     }
-
-    textarea, input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 6px 0;
-      box-sizing: border-box;
-    }
-
     .modal {
-      background: #e6f0ff;
+      background-color: #e6f0ff;
       border: 1px solid #99c2ff;
       padding: 20px;
       border-radius: 6px;
       margin-top: 20px;
     }
-
-    details summary {
-      font-weight: bold;
-      margin-top: 10px;
-      cursor: pointer;
+    textarea, input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+    .logo {
+      float: right;
+      height: 50px;
+    }
+    .doctor-img {
+      float: left;
+      height: 50px;
+    }
+    .clearfix {
+      overflow: auto;
     }
   </style>
 </head>
 <body>
 
-  <div class="top-header">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor">
-    <h2>Doctor AI</h2>
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+  <div class="clearfix">
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" class="doctor-img" alt="Doctor Image">
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
   </div>
 
+  <h2>Doctor AI</h2>
+
   <div class="notice">
-    🔒 This is a one-time free session. Subscribe to get unlimited access.
+    🔒 <strong>This is a one-time free session.</strong> Subscribe to get unlimited access.
+    <br><br>
+    ✅ <strong>Instructions:</strong> Please complete <strong>all fields</strong> for a customized summary.
+    <br>⏳ The summary may take a few moments to appear after you click submit — thank you for your patience.
+    <br>💡 <em>Tip:</em> The more details you include, the more tailored and useful your summary will be.
   </div>
 
   <form method="POST">
-    <div class="section">
+    <input type="hidden" name="use_count" value="{{ use_count }}">
+
+    <button type="button" class="accordion">Step 1: Describe Your Symptoms</button>
+    <div class="panel">
       <label for="symptoms">Describe your symptoms:</label>
-      <textarea name="symptoms" rows="4" required></textarea>
+      <textarea name="symptoms" required></textarea>
+      <span class="mic-icon">🎤</span>
     </div>
 
-    <details>
-      <summary>Click to provide more detail</summary>
+    <button type="button" class="accordion">Step 2: Basic Information</button>
+    <div class="panel">
+      <label for="age_range">Age Range:</label>
+      <select name="age_range">
+        <option value="skip">Prefer not to say</option>
+        <option value="0-12">0–12</option>
+        <option value="13-19">13–19</option>
+        <option value="20-40">20–40</option>
+        <option value="41-60">41–60</option>
+        <option value="61+">61+</option>
+      </select>
+      <br>
+      <label for="sex">Sex/Gender:</label>
+      <select name="sex">
+        <option value="skip">Prefer not to say</option>
+        <option value="female">Female</option>
+        <option value="male">Male</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
 
-      <div class="section">
-        <label for="age_range">Age Range:</label>
-        <select name="age_range">
-          <option value="skip">Prefer not to say</option>
-          <option value="0-12">0–12</option>
-          <option value="13-19">13–19</option>
-          <option value="20-40">20–40</option>
-          <option value="41-60">41–60</option>
-          <option value="61+">61+</option>
-        </select>
-      </div>
+    <button type="button" class="accordion">Step 3: Medical History</button>
+    <div class="panel">
+      <label for="existing_conditions">Existing conditions:</label>
+      <input type="text" name="existing_conditions">
+      <label for="allergies">Allergies:</label>
+      <input type="text" name="allergies">
+      <label for="medications">Current medications:</label>
+      <input type="text" name="medications">
+    </div>
 
-      <div class="section">
-        <label for="sex">Sex/Gender:</label>
-        <select name="sex">
-          <option value="skip">Prefer not to say</option>
-          <option value="female">Female</option>
-          <option value="male">Male</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      <div class="section">
-        <label for="existing_conditions">Existing conditions:</label>
-        <input type="text" name="existing_conditions">
-      </div>
-
-      <div class="section">
-        <label for="allergies">Allergies:</label>
-        <input type="text" name="allergies">
-      </div>
-
-      <div class="section">
-        <label for="medications">Current medications:</label>
-        <input type="text" name="medications">
-      </div>
-
-      <div class="section">
-        <label for="onset">When did it start?</label>
-        <input type="text" name="onset">
-      </div>
-
-      <div class="section">
-        <label for="better">What makes it better?</label>
-        <input type="text" name="better">
-      </div>
-
-      <div class="section">
-        <label for="worse">What makes it worse?</label>
-        <input type="text" name="worse">
-      </div>
-
-      <div class="section">
-        <label for="severity">Severity (1–10):</label>
-        <input type="text" name="severity">
-      </div>
-
-      <div class="section">
-        <label for="treatments">What have you tried?</label>
-        <input type="text" name="treatments">
-      </div>
-
-    </details>
+    <button type="button" class="accordion">Step 4: More Symptom Details</button>
+    <div class="panel">
+      <label for="onset">When did it start?</label>
+      <input type="text" name="onset">
+      <label for="better">What makes it better?</label>
+      <input type="text" name="better">
+      <label for="worse">What makes it worse?</label>
+      <input type="text" name="worse">
+      <label for="severity">Severity (1–10):</label>
+      <input type="text" name="severity">
+      <label for="treatments">What have you tried?</label>
+      <input type="text" name="treatments">
+    </div>
 
     <button type="submit" class="submit-btn">Submit</button>
   </form>
@@ -172,7 +172,6 @@
     <div class="modal">
       <strong>Doctor AI Summary:</strong>
       <p>{{ response | safe }}</p>
-
       <form method="POST" action="/followup">
         <label for="followup">Have a follow-up question?</label>
         <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
@@ -181,6 +180,17 @@
       </form>
     </div>
   {% endif %}
+
+  <script>
+    const acc = document.getElementsByClassName("accordion");
+    for (let i = 0; i < acc.length; i++) {
+      acc[i].addEventListener("click", function () {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+      });
+    }
+  </script>
 
 </body>
 </html>
