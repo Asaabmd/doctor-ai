@@ -141,11 +141,11 @@ def followup():
 def webhook():
     event = request.get_json()
 
-    if not event or "event" not in event or "email" not in event:
-        return jsonify({"status": "ignored", "reason": "missing data"}), 400
+    if not event or "event_name" not in event or "email" not in event:
+        return jsonify({"status": "ignored", "reason": "missing event_name or email"}), 400
 
-    email = event["email"].lower()
-    event_type = event["event"]
+    event_type = event.get("event_name", "").lower()
+    email = event.get("email", "").strip().lower()
 
     try:
         with open(SUBSCRIPTION_FILE, "r") as f:

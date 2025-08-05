@@ -7,121 +7,155 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      padding: 20px;
+      margin: 20px;
+      background-color: #f0f8ff;
     }
-    h2 {
-      color: #003366;
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .accordion {
-      background-color: #e6f0ff;
-      color: #003366;
-      cursor: pointer;
-      padding: 15px;
-      width: 100%;
-      border: none;
-      outline: none;
-      text-align: left;
-      transition: 0.4s;
-      border-radius: 5px;
-      margin-top: 10px;
-      font-weight: bold;
+
+    .header img:first-child {
+      float: left;
     }
-    .accordion:after {
-      content: '\25BC';
+
+    .header img:last-child {
       float: right;
     }
-    .accordion.active:after {
-      content: "\25B2";
+
+    .header img {
+      height: 60px;
     }
-    .panel {
-      padding: 10px 15px;
-      background-color: white;
-      display: none;
-      overflow: hidden;
-      border-radius: 5px;
-      border: 1px solid #cce0ff;
+
+    h2 {
+      text-align: center;
+      color: #004d99;
+      margin-top: 10px;
     }
-    .notice {
+
+    .info-box {
       background-color: #e6f0ff;
-      border: 1px solid #99c2ff;
-      color: #003366;
+      border-left: 5px solid #004d99;
       padding: 15px;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       border-radius: 5px;
-      font-size: 14px;
     }
-    .mic-icon {
+
+    .section {
+      margin-bottom: 15px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+
+    .mic-button {
+      margin-top: 5px;
+      background-color: #cce5ff;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
       cursor: pointer;
-      margin-left: 8px;
     }
+
     .submit-btn {
       background-color: #007bff;
       color: white;
-      padding: 10px 20px;
+      padding: 10px 16px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-top: 10px;
     }
+
     .submit-btn:hover {
       background-color: #0056b3;
     }
+
     .modal {
-      background-color: #e6f0ff;
+      background: #e6f0ff;
       border: 1px solid #99c2ff;
       padding: 20px;
       border-radius: 6px;
       margin-top: 20px;
     }
-    textarea, input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      box-sizing: border-box;
-    }
-    .logo {
-      float: right;
-      height: 50px;
-    }
-    .doctor-img {
-      float: left;
-      height: 50px;
-    }
-    .clearfix {
-      overflow: auto;
-    }
   </style>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const inputs = Array.from(document.querySelectorAll("input, select, textarea"));
+      inputs.forEach((el, idx) => {
+        el.addEventListener("keydown", function(e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            const next = inputs[idx + 1];
+            if (next) next.focus();
+          }
+        });
+      });
+    });
+
+    function startDictation(button) {
+      const field = button.previousElementSibling;
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.onresult = function(event) {
+        field.value += event.results[0][0].transcript;
+        field.focus();
+      };
+      recognition.start();
+    }
+  </script>
 </head>
 <body>
 
-  <div class="clearfix">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" class="doctor-img" alt="Doctor Image">
-    <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
+  <div class="header">
+    <img src="/static/doctor.jpeg" alt="Doctor">
+    <img src="/static/logo.png" alt="Logo">
   </div>
 
   <h2>Doctor AI</h2>
 
-  <div class="notice">
-    🔒 <strong>This is a one-time free session.</strong> Subscribe to get unlimited access.
-    <br><br>
-    ✅ <strong>Instructions:</strong> Please complete <strong>all fields</strong> for a customized summary.
-    <br>⏳ The summary may take a few moments to appear after you click submit — thank you for your patience.
-    <br>💡 <em>Tip:</em> The more details you include, the more tailored and useful your summary will be.
+  <div class="info-box">
+    <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is not a replacement for professional medical care—always consult a physician for medical concerns.</p>
+
+    <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
+
+    <p>✅ <strong>Please complete all fields</strong> to receive your summary. After clicking <strong>Submit</strong>, please wait a few moments while your personalized summary is generated.</p>
   </div>
 
   <form method="POST">
-    <input type="hidden" name="use_count" value="{{ use_count }}">
 
-    <button type="button" class="accordion">Step 1: Describe Your Symptoms</button>
-    <div class="panel">
-      <label for="symptoms">Describe your symptoms:</label>
-      <textarea name="symptoms" required></textarea>
-      <span class="mic-icon">🎤</span>
-    </div>
+    {% for field, label in [
+      ('symptoms', 'Describe your symptoms:'),
+      ('existing_conditions', 'Existing conditions:'),
+      ('allergies', 'Allergies:'),
+      ('medications', 'Current medications:'),
+      ('onset', 'When did it start?'),
+      ('better', 'What makes it better?'),
+      ('worse', 'What makes it worse?'),
+      ('severity', 'Severity (1–10):'),
+      ('treatments', 'What have you tried?'),
+      ('email', 'Your Email:')
+    ] %}
+      <div class="section">
+        <label for="{{ field }}">{{ label }}</label>
+        {% if field == 'symptoms' %}
+          <textarea name="{{ field }}" rows="3" required></textarea>
+        {% elif field == 'email' %}
+          <input type="email" name="{{ field }}" required>
+        {% else %}
+          <input type="text" name="{{ field }}">
+        {% endif %}
+        <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+      </div>
+    {% endfor %}
 
-    <button type="button" class="accordion">Step 2: Basic Information</button>
-    <div class="panel">
+    <div class="section">
       <label for="age_range">Age Range:</label>
       <select name="age_range">
         <option value="skip">Prefer not to say</option>
@@ -131,7 +165,9 @@
         <option value="41-60">41–60</option>
         <option value="61+">61+</option>
       </select>
-      <br>
+    </div>
+
+    <div class="section">
       <label for="sex">Sex/Gender:</label>
       <select name="sex">
         <option value="skip">Prefer not to say</option>
@@ -141,56 +177,22 @@
       </select>
     </div>
 
-    <button type="button" class="accordion">Step 3: Medical History</button>
-    <div class="panel">
-      <label for="existing_conditions">Existing conditions:</label>
-      <input type="text" name="existing_conditions">
-      <label for="allergies">Allergies:</label>
-      <input type="text" name="allergies">
-      <label for="medications">Current medications:</label>
-      <input type="text" name="medications">
-    </div>
-
-    <button type="button" class="accordion">Step 4: More Symptom Details</button>
-    <div class="panel">
-      <label for="onset">When did it start?</label>
-      <input type="text" name="onset">
-      <label for="better">What makes it better?</label>
-      <input type="text" name="better">
-      <label for="worse">What makes it worse?</label>
-      <input type="text" name="worse">
-      <label for="severity">Severity (1–10):</label>
-      <input type="text" name="severity">
-      <label for="treatments">What have you tried?</label>
-      <input type="text" name="treatments">
-    </div>
-
+    <p><strong>🔔 Reminder:</strong> Please complete all fields and wait a few moments after clicking Submit to receive your customized report.</p>
     <button type="submit" class="submit-btn">Submit</button>
   </form>
 
   {% if response %}
     <div class="modal">
-      <strong>Doctor AI Summary:</strong>
+      <strong style="font-size: 18px;">Doctor AI Summary:</strong>
       <p>{{ response | safe }}</p>
+
       <form method="POST" action="/followup">
         <label for="followup">Have a follow-up question?</label>
         <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
-        <br>
         <button class="submit-btn" type="submit">Submit Follow-up Question</button>
       </form>
     </div>
   {% endif %}
-
-  <script>
-    const acc = document.getElementsByClassName("accordion");
-    for (let i = 0; i < acc.length; i++) {
-      acc[i].addEventListener("click", function () {
-        this.classList.toggle("active");
-        const panel = this.nextElementSibling;
-        panel.style.display = panel.style.display === "block" ? "none" : "block";
-      });
-    }
-  </script>
 
 </body>
 </html>
