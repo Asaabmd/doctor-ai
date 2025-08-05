@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, make_response
+from flask import Flask, render_template, request, make_response, redirect, url_for
 import openai
 import os
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔍 Generate main summary using GPT
+# 🔍 Function to generate summary using GPT
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -49,25 +49,26 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
+
 # 🏠 Main route
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Step 1: Payhip redirect adds permanent access cookie
+    # Step 1: Handle Payhip access link
     if request.args.get("access") == "granted":
-        resp = make_response(render_template("index.html", response=""))
+        resp = make_response(redirect(url_for("index")))
         resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)  # 1 year
         return resp
 
-    # Step 2: Get cookies
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
+    response_text = ""
 
-    # ✅ Step 3: Restrict after 1 free use
-    if not has_access and use_count >= 1:
-        return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
-
-    output = ""
     if request.method == "POST":
+        # Step 2: Check if free user already used
+        if not has_access and use_count >= 1:
+            return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
+
+        # Step 3: Collect input and generate summary
         symptoms = request.form.get("symptoms", "")
         context = {
             "age_range": request.form.get("age_range", "skip"),
@@ -83,19 +84,21 @@ def index():
         }
 
         try:
-            output = ask_chatgpt(symptoms, context)
+            response_text = ask_chatgpt(symptoms, context)
         except Exception as e:
-            output = f"⚠️ Error: {e}"
+            response_text = f"⚠️ Error: {e}"
 
-        # ✅ Step 4: Track use for non-subscribers
+        # Step 4: Set cookie and show result
+        resp = make_response(render_template("index.html", response=response_text))
         if not has_access:
-            resp = make_response(render_template("index.html", response=output))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)  # 30 days
-            return resp
+        return resp
 
-    return render_template("index.html", response=output)
+    # Step 5: Initial GET or after redirect
+    return render_template("index.html", response=response_text)
 
-# ➕ Follow-up route
+
+# ➕ Follow-up question route
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
