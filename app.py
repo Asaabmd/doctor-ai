@@ -5,7 +5,6 @@ import os
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔍 ChatGPT Summary Generator
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -44,24 +43,23 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     return response['choices'][0]['message']['content']
 
 
-# 🏠 Main Route
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Check Payhip Redirect
     if request.args.get("access") == "granted":
-        resp = make_response(render_template("index.html", response=""))
+        resp = make_response(render_template("index.html", response="", use_count=0))
         resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
+        resp.set_cookie("use_count", "0", max_age=60 * 60 * 24 * 30)
         return resp
 
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
-
-    output = ""
     locked_message = "🔒 This free version allows only one summary. Please subscribe for unlimited access."
 
+    # POST — new submission
     if request.method == "POST":
-        if not has_access and use_count >= 1:
-            return render_template("index.html", response=locked_message)
+        form_use_count = int(request.form.get("use_count", 0))
+        if not has_access and (use_count >= 1 or form_use_count >= 1):
+            return render_template("index.html", response=locked_message, use_count=use_count)
 
         symptoms = request.form.get("symptoms", "")
         context = {
@@ -82,19 +80,19 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        resp = make_response(render_template("index.html", response=output))
+        new_use_count = use_count + 1
+        resp = make_response(render_template("index.html", response=output, use_count=new_use_count))
         if not has_access:
-            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
+            resp.set_cookie("use_count", str(new_use_count), max_age=60 * 60 * 24 * 30)
         return resp
 
-    # Show locked message on reload if already used
+    # First visit or after blocking
     if not has_access and use_count >= 1:
-        return render_template("index.html", response=locked_message)
+        return render_template("index.html", response=locked_message, use_count=use_count)
 
-    return render_template("index.html", response=output)
+    return render_template("index.html", response="", use_count=use_count)
 
 
-# ➕ Follow-up
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
@@ -110,4 +108,4 @@ def followup():
         followup_response = reply['choices'][0]['message']['content']
     except Exception as e:
         followup_response = f"⚠️ Error: {e}"
-    return render_template("index.html", response=followup_response)
+    return render_template("index.html", response=followup_response, use_count=request.cookies.get("use_count", 0))
