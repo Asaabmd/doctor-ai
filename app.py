@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, make_response, redirect, url_for
+from flask import Flask, render_template, request, make_response
 import openai
 import os
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔍 Function to generate summary using GPT
+# 🔍 ChatGPT Summary Generator
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -36,39 +36,33 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {
-                "role": "system",
-                "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "system", "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."},
+            {"role": "user", "content": prompt}
         ],
         temperature=0.6
     )
     return response['choices'][0]['message']['content']
 
 
-# 🏠 Main route
+# 🏠 Main Route
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Step 1: Handle Payhip access link
+    # Check Payhip Redirect
     if request.args.get("access") == "granted":
-        resp = make_response(redirect(url_for("index")))
-        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)  # 1 year
+        resp = make_response(render_template("index.html", response=""))
+        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
         return resp
 
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
-    response_text = ""
+
+    output = ""
+    locked_message = "🔒 This free version allows only one summary. Please subscribe for unlimited access."
 
     if request.method == "POST":
-        # Step 2: Check if free user already used
         if not has_access and use_count >= 1:
-            return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
+            return render_template("index.html", response=locked_message)
 
-        # Step 3: Collect input and generate summary
         symptoms = request.form.get("symptoms", "")
         context = {
             "age_range": request.form.get("age_range", "skip"),
@@ -80,25 +74,27 @@ def index():
             "better": request.form.get("better", "unknown"),
             "worse": request.form.get("worse", "unknown"),
             "severity": request.form.get("severity", "unknown"),
-            "treatments": request.form.get("treatments", "unknown"),
+            "treatments": request.form.get("treatments", "unknown")
         }
 
         try:
-            response_text = ask_chatgpt(symptoms, context)
+            output = ask_chatgpt(symptoms, context)
         except Exception as e:
-            response_text = f"⚠️ Error: {e}"
+            output = f"⚠️ Error: {e}"
 
-        # Step 4: Set cookie and show result
-        resp = make_response(render_template("index.html", response=response_text))
+        resp = make_response(render_template("index.html", response=output))
         if not has_access:
-            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)  # 30 days
+            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
         return resp
 
-    # Step 5: Initial GET or after redirect
-    return render_template("index.html", response=response_text)
+    # Show locked message on reload if already used
+    if not has_access and use_count >= 1:
+        return render_template("index.html", response=locked_message)
+
+    return render_template("index.html", response=output)
 
 
-# ➕ Follow-up question route
+# ➕ Follow-up
 @app.route("/followup", methods=["POST"])
 def followup():
     followup_question = request.form.get("followup", "")
@@ -106,14 +102,8 @@ def followup():
         reply = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."
-                },
-                {
-                    "role": "user",
-                    "content": f"A patient has a follow-up question:\n\n{followup_question}\n\nPlease answer clearly and briefly, and remind them this is educational only."
-                }
+                {"role": "system", "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
+                {"role": "user", "content": f"A patient has a follow-up question:\n\n{followup_question}\n\nPlease answer clearly and briefly, and remind them this is educational only."}
             ],
             temperature=0.6
         )
