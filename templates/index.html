@@ -11,8 +11,20 @@
       background-color: #f9f9f9;
     }
 
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .top-header img {
+      height: 60px;
+    }
+
     h2 {
       color: #004d99;
+      flex-grow: 1;
+      text-align: center;
     }
 
     .section {
@@ -61,87 +73,97 @@
       margin-top: 20px;
     }
 
+    details summary {
+      font-weight: bold;
+      margin-top: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <h2>Doctor AI</h2>
+  <div class="top-header">
+    <img src="{{ url_for('static', filename='doctor.png') }}" alt="Doctor">
+    <h2>Doctor AI</h2>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+  </div>
 
   <div class="notice">
     🔒 This is a one-time free session. Subscribe to get unlimited access.
   </div>
 
   <form method="POST">
-
-    <!-- Hidden field to track use count -->
-    <input type="hidden" name="use_count" value="{{ use_count }}">
-
     <div class="section">
       <label for="symptoms">Describe your symptoms:</label>
       <textarea name="symptoms" rows="4" required></textarea>
     </div>
 
-    <div class="section">
-      <label for="age_range">Age Range:</label>
-      <select name="age_range">
-        <option value="skip">Prefer not to say</option>
-        <option value="0-12">0–12</option>
-        <option value="13-19">13–19</option>
-        <option value="20-40">20–40</option>
-        <option value="41-60">41–60</option>
-        <option value="61+">61+</option>
-      </select>
-    </div>
+    <details>
+      <summary>Click to provide more detail</summary>
 
-    <div class="section">
-      <label for="sex">Sex/Gender:</label>
-      <select name="sex">
-        <option value="skip">Prefer not to say</option>
-        <option value="female">Female</option>
-        <option value="male">Male</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
+      <div class="section">
+        <label for="age_range">Age Range:</label>
+        <select name="age_range">
+          <option value="skip">Prefer not to say</option>
+          <option value="0-12">0–12</option>
+          <option value="13-19">13–19</option>
+          <option value="20-40">20–40</option>
+          <option value="41-60">41–60</option>
+          <option value="61+">61+</option>
+        </select>
+      </div>
 
-    <div class="section">
-      <label for="existing_conditions">Existing conditions:</label>
-      <input type="text" name="existing_conditions">
-    </div>
+      <div class="section">
+        <label for="sex">Sex/Gender:</label>
+        <select name="sex">
+          <option value="skip">Prefer not to say</option>
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
 
-    <div class="section">
-      <label for="allergies">Allergies:</label>
-      <input type="text" name="allergies">
-    </div>
+      <div class="section">
+        <label for="existing_conditions">Existing conditions:</label>
+        <input type="text" name="existing_conditions">
+      </div>
 
-    <div class="section">
-      <label for="medications">Current medications:</label>
-      <input type="text" name="medications">
-    </div>
+      <div class="section">
+        <label for="allergies">Allergies:</label>
+        <input type="text" name="allergies">
+      </div>
 
-    <div class="section">
-      <label for="onset">When did it start?</label>
-      <input type="text" name="onset">
-    </div>
+      <div class="section">
+        <label for="medications">Current medications:</label>
+        <input type="text" name="medications">
+      </div>
 
-    <div class="section">
-      <label for="better">What makes it better?</label>
-      <input type="text" name="better">
-    </div>
+      <div class="section">
+        <label for="onset">When did it start?</label>
+        <input type="text" name="onset">
+      </div>
 
-    <div class="section">
-      <label for="worse">What makes it worse?</label>
-      <input type="text" name="worse">
-    </div>
+      <div class="section">
+        <label for="better">What makes it better?</label>
+        <input type="text" name="better">
+      </div>
 
-    <div class="section">
-      <label for="severity">Severity (1–10):</label>
-      <input type="text" name="severity">
-    </div>
+      <div class="section">
+        <label for="worse">What makes it worse?</label>
+        <input type="text" name="worse">
+      </div>
 
-    <div class="section">
-      <label for="treatments">What have you tried?</label>
-      <input type="text" name="treatments">
-    </div>
+      <div class="section">
+        <label for="severity">Severity (1–10):</label>
+        <input type="text" name="severity">
+      </div>
+
+      <div class="section">
+        <label for="treatments">What have you tried?</label>
+        <input type="text" name="treatments">
+      </div>
+
+    </details>
 
     <button type="submit" class="submit-btn">Submit</button>
   </form>

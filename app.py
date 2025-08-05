@@ -42,25 +42,21 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.args.get("access") == "granted":
-        resp = make_response(render_template("index.html", response="", use_count=0))
-        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
-        resp.set_cookie("use_count", "0", max_age=60 * 60 * 24 * 30)
+        resp = make_response(render_template("index.html", response=""))
+        resp.set_cookie("access_granted", "true", max_age=60*60*24*365)
         return resp
 
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
-    locked_message = "🔒 This free version allows only one summary. Please subscribe for unlimited access."
 
-    # POST — new submission
+    if not has_access and use_count >= 1 and request.method == "POST":
+        return render_template("index.html", response="🔒 This free version allows only one summary. Please subscribe for unlimited access.")
+
+    output = ""
     if request.method == "POST":
-        form_use_count = int(request.form.get("use_count", 0))
-        if not has_access and (use_count >= 1 or form_use_count >= 1):
-            return render_template("index.html", response=locked_message, use_count=use_count)
-
         symptoms = request.form.get("symptoms", "")
         context = {
             "age_range": request.form.get("age_range", "skip"),
@@ -72,7 +68,7 @@ def index():
             "better": request.form.get("better", "unknown"),
             "worse": request.form.get("worse", "unknown"),
             "severity": request.form.get("severity", "unknown"),
-            "treatments": request.form.get("treatments", "unknown")
+            "treatments": request.form.get("treatments", "unknown"),
         }
 
         try:
@@ -80,18 +76,12 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        new_use_count = use_count + 1
-        resp = make_response(render_template("index.html", response=output, use_count=new_use_count))
         if not has_access:
-            resp.set_cookie("use_count", str(new_use_count), max_age=60 * 60 * 24 * 30)
-        return resp
+            resp = make_response(render_template("index.html", response=output))
+            resp.set_cookie("use_count", str(use_count + 1), max_age=60*60*24*30)
+            return resp
 
-    # First visit or after blocking
-    if not has_access and use_count >= 1:
-        return render_template("index.html", response=locked_message, use_count=use_count)
-
-    return render_template("index.html", response="", use_count=use_count)
-
+    return render_template("index.html", response=output)
 
 @app.route("/followup", methods=["POST"])
 def followup():
@@ -108,4 +98,4 @@ def followup():
         followup_response = reply['choices'][0]['message']['content']
     except Exception as e:
         followup_response = f"⚠️ Error: {e}"
-    return render_template("index.html", response=followup_response, use_count=request.cookies.get("use_count", 0))
+    return render_template("index.html", response=followup_response)
