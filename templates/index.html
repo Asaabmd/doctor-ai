@@ -114,7 +114,9 @@
 
   <div class="info-box">
     <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is not a replacement for professional medical care—always consult a physician for medical concerns.</p>
+
     <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
+
     <p>✅ <strong>Please complete all fields</strong> to receive your summary. After clicking <strong>Submit</strong>, please wait a few moments while your personalized summary is generated.</p>
   </div>
 
@@ -127,13 +129,13 @@
     </div>
 
     <div class="section">
-      <label for="existing_conditions">Existing conditions (What are your current medical conditions):</label>
+      <label for="existing_conditions">Existing conditions (What are your current medical conditions?):</label>
       <input type="text" name="existing_conditions">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="allergies">Allergies (Allergies to medications, food or other items. If none, enter 'None'):</label>
+      <label for="allergies">Allergies (Allergies to medications, food, or other items. If none, enter "None"):</label>
       <input type="text" name="allergies">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
@@ -151,25 +153,25 @@
     </div>
 
     <div class="section">
-      <label for="better">What makes it better? (If not sure, enter 'NA'):</label>
+      <label for="better">What makes it better? (If not sure, enter "NA"):</label>
       <input type="text" name="better">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="worse">What makes it worse? (If not sure, enter 'NA'):</label>
+      <label for="worse">What makes it worse? (If not sure, enter "NA"):</label>
       <input type="text" name="worse">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="severity">Severity (1–10) (How severe are your symptoms? 10 is the most severe):</label>
+      <label for="severity">Severity (1–10) (10 is the most severe):</label>
       <input type="text" name="severity">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="treatments">What have you tried? (Medications or remedies you have tried):</label>
+      <label for="treatments">What have you tried? (What medications or remedies have you tried?):</label>
       <input type="text" name="treatments">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
@@ -213,6 +215,8 @@
       <form method="POST" action="/followup">
         <label for="followup">Have a follow-up question?</label>
         <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
+        <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+        <br><br>
         <button class="submit-btn" type="submit">Submit Follow-up Question</button>
       </form>
     </div>
