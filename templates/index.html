@@ -7,8 +7,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
       background-color: #f0f8ff;
+      padding: 20px;
     }
 
     .header {
@@ -24,19 +24,23 @@
     h2 {
       text-align: center;
       color: #004d99;
-      margin-top: 10px;
     }
 
     .info-box {
       background-color: #e6f0ff;
       border-left: 5px solid #004d99;
       padding: 15px;
+      margin-top: 10px;
       margin-bottom: 20px;
       border-radius: 5px;
     }
 
     .section {
       margin-bottom: 15px;
+    }
+
+    label {
+      font-weight: bold;
     }
 
     textarea, input, select {
@@ -62,6 +66,7 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      margin-top: 10px;
     }
 
     .submit-btn:hover {
@@ -114,28 +119,32 @@
 
   <div class="info-box">
     <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is not a replacement for professional medical care—always consult a physician for medical concerns.</p>
-
     <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
-
-    <p>✅ <strong>Please complete all fields</strong> to receive your summary. After clicking <strong>Submit</strong>, please wait a few moments while your personalized summary is generated.</p>
+    <p>✅ Please complete all fields to receive your summary. After clicking Submit, please wait a few moments while your personalized summary is generated. You may type into each field or click the 🎤 microphone button to use voice input.</p>
   </div>
 
   <form method="POST">
 
     <div class="section">
-      <label for="symptoms">Describe your symptoms in detail. The more details you provide, the more customized your summary:</label>
+      <label for="email">Your Email (required):</label>
+      <input type="email" name="email" required>
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="symptoms">Describe your symptoms in detail. The more details you provide the more customized your summary:</label>
       <textarea name="symptoms" rows="3" required></textarea>
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="existing_conditions">Existing conditions (What are your current medical conditions?):</label>
+      <label for="existing_conditions">Existing conditions (What are your current medical conditions):</label>
       <input type="text" name="existing_conditions">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="allergies">Allergies (Allergies to medications, food, or other items. If none, enter "None"):</label>
+      <label for="allergies">Allergies (Allergies to medications, food, or other items. If none, enter 'None'):</label>
       <input type="text" name="allergies">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
@@ -147,19 +156,19 @@
     </div>
 
     <div class="section">
-      <label for="onset">When did it start? (When did your current symptoms start?):</label>
+      <label for="onset">When did it start? (When did your current symptoms start?)</label>
       <input type="text" name="onset">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="better">What makes it better? (If not sure, enter "NA"):</label>
+      <label for="better">What makes it better? (If not sure, enter 'NA'):</label>
       <input type="text" name="better">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
     <div class="section">
-      <label for="worse">What makes it worse? (If not sure, enter "NA"):</label>
+      <label for="worse">What makes it worse? (If not sure, enter 'NA'):</label>
       <input type="text" name="worse">
       <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
@@ -179,7 +188,6 @@
     <div class="section">
       <label for="age_range">Age Range:</label>
       <select name="age_range">
-        <option value="skip">Prefer not to say</option>
         <option value="0-12">0–12</option>
         <option value="13-19">13–19</option>
         <option value="20-40">20–40</option>
@@ -191,16 +199,10 @@
     <div class="section">
       <label for="sex">Sex/Gender:</label>
       <select name="sex">
-        <option value="skip">Prefer not to say</option>
         <option value="female">Female</option>
         <option value="male">Male</option>
         <option value="other">Other</option>
       </select>
-    </div>
-
-    <div class="section">
-      <label for="email">Your Email:</label>
-      <input type="email" name="email" required>
     </div>
 
     <p><strong>🔔 Reminder:</strong> Please complete all fields and wait a few moments after clicking Submit to receive your customized report.</p>
@@ -208,18 +210,16 @@
   </form>
 
   {% if response %}
-    <div class="modal">
-      <strong style="font-size: 18px;">Doctor AI Summary:</strong>
-      <p>{{ response | safe }}</p>
+  <div class="modal">
+    <h3>📝 Doctor AI Summary:</h3>
+    <p>{{ response | safe }}</p>
 
-      <form method="POST" action="/followup">
-        <label for="followup">Have a follow-up question?</label>
-        <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
-        <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
-        <br><br>
-        <button class="submit-btn" type="submit">Submit Follow-up Question</button>
-      </form>
-    </div>
+    <form method="POST" action="/followup">
+      <label for="followup">Have a follow-up question?</label>
+      <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
+      <button class="submit-btn" type="submit">Submit Follow-up Question</button>
+    </form>
+  </div>
   {% endif %}
 
 </body>
