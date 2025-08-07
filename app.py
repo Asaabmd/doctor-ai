@@ -7,7 +7,7 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 SUBSCRIPTION_FILE = "subscriptions.json"
 
-# 🔄 Helper to check subscription status
+# 🔄 Check subscription status
 def is_subscribed(email: str) -> bool:
     try:
         with open(SUBSCRIPTION_FILE, "r") as f:
@@ -16,7 +16,7 @@ def is_subscribed(email: str) -> bool:
     except Exception:
         return False
 
-# 🤖 Generate summary from ChatGPT
+# 🤖 Ask ChatGPT
 def ask_chatgpt(symptoms: str, context: dict) -> str:
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
@@ -54,22 +54,23 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
-# 🌐 Homepage
+# 🌐 Home route
 @app.route("/", methods=["GET", "POST"])
 def index():
     email = request.cookies.get("email")
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
+    output = ""
+    followup_output = ""
 
     if request.args.get("access") == "granted":
-        resp = make_response(render_template("index.html", response="", use_count=use_count))
+        resp = make_response(render_template("index.html", response="", followup_response="", use_count=use_count))
         resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
         return resp
 
     if not (has_access or is_subscribed(email or "")) and use_count >= 1 and request.method == "POST":
-        return render_template("index.html", response="🔒 This free version allows only one summary and one follow-up. Please subscribe for unlimited access.", use_count=use_count)
+        return render_template("index.html", response="🔒 This free version allows only one summary and one follow-up. Please subscribe for unlimited access.", followup_response="", use_count=use_count)
 
-    output = ""
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         symptoms = request.form.get("symptoms", "")
@@ -92,14 +93,14 @@ def index():
             output = f"⚠️ Error: {e}"
 
         if not (has_access or is_subscribed(email)):
-            resp = make_response(render_template("index.html", response=output, use_count=use_count + 1))
+            resp = make_response(render_template("index.html", response=output, followup_response="", use_count=use_count + 1))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
             resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
             return resp
 
-    return render_template("index.html", response=output, use_count=use_count)
+    return render_template("index.html", response=output, followup_response=followup_output, use_count=use_count)
 
-# ➕ Follow-up route
+# 🔁 Follow-up route
 @app.route("/followup", methods=["POST"])
 def followup():
     email = request.cookies.get("email")
@@ -107,7 +108,7 @@ def followup():
     use_count = int(request.cookies.get("use_count", 0))
 
     if not (has_access or is_subscribed(email or "")) and use_count >= 2:
-        return render_template("index.html", response="🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions.", use_count=use_count)
+        return render_template("index.html", response="", followup_response="🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions.", use_count=use_count)
 
     question = request.form.get("followup", "")
     try:
@@ -124,13 +125,13 @@ def followup():
         followup_response = f"⚠️ Error: {e}"
 
     if not (has_access or is_subscribed(email)):
-        resp = make_response(render_template("index.html", response=followup_response, use_count=use_count + 1))
+        resp = make_response(render_template("index.html", response="", followup_response=followup_response, use_count=use_count + 1))
         resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
         return resp
 
-    return render_template("index.html", response=followup_response, use_count=use_count)
+    return render_template("index.html", response="", followup_response=followup_response, use_count=use_count)
 
-# ✅ Webhook to update subscriptions.json
+# ✅ Payhip webhook route
 @app.route("/webhook", methods=["POST"])
 def webhook():
     event = request.get_json()
@@ -156,6 +157,6 @@ def webhook():
 
     return jsonify({"status": "success", "email": email, "event": event_type}), 200
 
-# 🚀 Run the app
+# 🚀 Run app
 if __name__ == "__main__":
     app.run(debug=True)
