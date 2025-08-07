@@ -17,14 +17,6 @@
       align-items: center;
     }
 
-    .header img:first-child {
-      float: left;
-    }
-
-    .header img:last-child {
-      float: right;
-    }
-
     .header img {
       height: 60px;
     }
@@ -129,7 +121,6 @@
   </div>
 
   <form method="POST">
-
     {% for field, label in [
       ('symptoms', 'Describe your symptoms:'),
       ('existing_conditions', 'Existing conditions:'),
