@@ -61,19 +61,16 @@ def index():
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
 
-    # Step 1: Payhip ?access=granted logic
     if request.args.get("access") == "granted":
         resp = make_response(render_template("index.html", response="", use_count=use_count))
         resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
         return resp
 
-    # Step 2: Enforce usage limits
     if not (has_access or is_subscribed(email or "")) and use_count >= 1 and request.method == "POST":
         return render_template("index.html", response="🔒 This free version allows only one summary and one follow-up. Please subscribe for unlimited access.", use_count=use_count)
 
     output = ""
     if request.method == "POST":
-        # Get form data
         email = request.form.get("email", "").strip().lower()
         symptoms = request.form.get("symptoms", "")
         context = {
@@ -94,7 +91,6 @@ def index():
         except Exception as e:
             output = f"⚠️ Error: {e}"
 
-        # If not subscribed, increment use count and set cookies
         if not (has_access or is_subscribed(email)):
             resp = make_response(render_template("index.html", response=output, use_count=use_count + 1))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
@@ -103,14 +99,13 @@ def index():
 
     return render_template("index.html", response=output, use_count=use_count)
 
-# ➕ Follow-up question route
+# ➕ Follow-up route
 @app.route("/followup", methods=["POST"])
 def followup():
     email = request.cookies.get("email")
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
 
-    # Enforce follow-up limit
     if not (has_access or is_subscribed(email or "")) and use_count >= 2:
         return render_template("index.html", response="🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions.", use_count=use_count)
 
@@ -128,7 +123,6 @@ def followup():
     except Exception as e:
         followup_response = f"⚠️ Error: {e}"
 
-    # If not subscribed, increment use count
     if not (has_access or is_subscribed(email)):
         resp = make_response(render_template("index.html", response=followup_response, use_count=use_count + 1))
         resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
@@ -136,11 +130,10 @@ def followup():
 
     return render_template("index.html", response=followup_response, use_count=use_count)
 
-# ✅ Webhook route to handle Payhip events
+# ✅ Webhook to update subscriptions.json
 @app.route("/webhook", methods=["POST"])
 def webhook():
     event = request.get_json()
-
     if not event or "event_name" not in event or "email" not in event:
         return jsonify({"status": "ignored", "reason": "missing event_name or email"}), 400
 
