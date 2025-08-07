@@ -114,37 +114,65 @@
 
   <div class="info-box">
     <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is not a replacement for professional medical care—always consult a physician for medical concerns.</p>
-
     <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
-
     <p>✅ <strong>Please complete all fields</strong> to receive your summary. After clicking <strong>Submit</strong>, please wait a few moments while your personalized summary is generated.</p>
   </div>
 
   <form method="POST">
-    {% for field, label in [
-      ('symptoms', 'Describe your symptoms:'),
-      ('existing_conditions', 'Existing conditions:'),
-      ('allergies', 'Allergies:'),
-      ('medications', 'Current medications:'),
-      ('onset', 'When did it start?'),
-      ('better', 'What makes it better?'),
-      ('worse', 'What makes it worse?'),
-      ('severity', 'Severity (1–10):'),
-      ('treatments', 'What have you tried?'),
-      ('email', 'Your Email:')
-    ] %}
-      <div class="section">
-        <label for="{{ field }}">{{ label }}</label>
-        {% if field == 'symptoms' %}
-          <textarea name="{{ field }}" rows="3" required></textarea>
-        {% elif field == 'email' %}
-          <input type="email" name="{{ field }}" required>
-        {% else %}
-          <input type="text" name="{{ field }}">
-        {% endif %}
-        <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
-      </div>
-    {% endfor %}
+
+    <div class="section">
+      <label for="symptoms">Describe your symptoms in detail. The more details you provide, the more customized your summary:</label>
+      <textarea name="symptoms" rows="3" required></textarea>
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="existing_conditions">Existing conditions (What are your current medical conditions):</label>
+      <input type="text" name="existing_conditions">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="allergies">Allergies (Allergies to medications, food or other items. If none, enter 'None'):</label>
+      <input type="text" name="allergies">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="medications">Current medications (What medications do you take?):</label>
+      <input type="text" name="medications">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="onset">When did it start? (When did your current symptoms start?):</label>
+      <input type="text" name="onset">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="better">What makes it better? (If not sure, enter 'NA'):</label>
+      <input type="text" name="better">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="worse">What makes it worse? (If not sure, enter 'NA'):</label>
+      <input type="text" name="worse">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="severity">Severity (1–10) (How severe are your symptoms? 10 is the most severe):</label>
+      <input type="text" name="severity">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
+
+    <div class="section">
+      <label for="treatments">What have you tried? (Medications or remedies you have tried):</label>
+      <input type="text" name="treatments">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+    </div>
 
     <div class="section">
       <label for="age_range">Age Range:</label>
@@ -166,6 +194,11 @@
         <option value="male">Male</option>
         <option value="other">Other</option>
       </select>
+    </div>
+
+    <div class="section">
+      <label for="email">Your Email:</label>
+      <input type="email" name="email" required>
     </div>
 
     <p><strong>🔔 Reminder:</strong> Please complete all fields and wait a few moments after clicking Submit to receive your customized report.</p>
