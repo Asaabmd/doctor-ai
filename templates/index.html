@@ -1,222 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Doctor AI</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #eef6fd;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #004080;
-        }
-        form {
-            max-width: 900px;
-            margin: auto;
-            padding: 20px;
-            background-color: #f5faff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #ccc;
-        }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-top: 15px;
-        }
-        textarea, input[type="text"], input[type="email"] {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-        button, .btn {
-            margin-top: 15px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-subscribe {
-            background-color: #007bff;
-            margin-top: 30px;
-            font-weight: bold;
-        }
-        .microphone-button {
-            position: absolute;
-            right: 15px;
-            top: 42px;
-            cursor: pointer;
-            font-size: 18px;
-            color: #444;
-        }
-        .input-wrapper {
-            position: relative;
-        }
-        .info-box {
-            background-color: #dfefff;
-            border-left: 5px solid #2196F3;
-            padding: 10px;
-            margin-bottom: 15px;
-        }
-        .info-box strong {
-            font-weight: bold;
-        }
-        .logo {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            width: 80px;
-        }
-        .doctor {
-            position: absolute;
-            top: 20px;
-            left: 30px;
-            width: 80px;
-        }
-        #summaryModal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #e9f2ff;
-            margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #007bff;
-            width: 80%;
-            border-radius: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Doctor AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f0f8ff; padding: 20px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    .header img { height: 60px; }
+
+    h2 { text-align: center; color: #004d99; margin: 8px 0 14px; }
+
+    .info-box {
+      background-color: #e6f0ff; border-left: 5px solid #004d99;
+      padding: 15px; border-radius: 5px; margin-bottom: 18px;
+    }
+
+    .section { margin-bottom: 14px; }
+    label { font-weight: bold; display: block; }
+
+    textarea, input, select {
+      width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box;
+    }
+
+    .mic-button {
+      margin-top: 6px; background-color: #cce5ff; border: none;
+      border-radius: 4px; padding: 6px 10px; cursor: pointer;
+    }
+
+    .submit-btn, .subscribe-btn {
+      background-color: #007bff; color: #fff; padding: 10px 16px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    .submit-btn:hover, .subscribe-btn:hover { background-color: #0056b3; }
+
+    .reminder {
+      background-color: #e6f0ff; border-left: 4px solid #004d99;
+      padding: 10px; border-radius: 4px; margin: 14px 0;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+      padding: 14px;
+    }
+    .modal-content {
+      background: #e6f0ff; border: 1px solid #99c2ff; border-radius: 8px;
+      max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto;
+      padding: 16px 18px; position: relative;
+    }
+    .modal-close {
+      position: absolute; right: 10px; top: 8px; font-size: 20px; cursor: pointer;
+    }
+    .modal-title { color: #004d99; margin-top: 0; }
+
+    .banner {
+      display: none;
+      background: #fff8e1; border: 1px solid #ffe08a; padding: 10px; border-radius: 6px;
+      margin-bottom: 16px; color: #7a5d00;
+    }
+    .banner a { color: #0056b3; font-weight: bold; text-decoration: underline; }
+  </style>
+
+  <script>
+    // Enter -> next field + auto-scroll
+    document.addEventListener("DOMContentLoaded", () => {
+      const fields = Array.from(document.querySelectorAll("input, select, textarea"));
+      fields.forEach((el, idx) => {
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            const next = fields[idx + 1];
+            if (next) {
+              next.focus();
+              next.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }
+        });
+      });
+
+      // Auto-open modal if server said so
+      const modalShown = "{{ 'true' if modal_shown else 'false' }}";
+      if (modalShown === "true") {
+        openModal();
+      }
+
+      // Show subscribe banner for non-subscribers if server says so
+      const showBanner = "{{ 'true' if show_subscribe_banner else 'false' }}";
+      if (showBanner === "true") {
+        const b = document.getElementById("subscribe-banner");
+        if (b) b.style.display = "block";
+      }
+    });
+
+    function openModal() {
+      const m = document.getElementById("modal");
+      if (m) m.style.display = "flex";
+    }
+    function closeModal() {
+      const m = document.getElementById("modal");
+      if (m) m.style.display = "none";
+    }
+
+    // Simple mic dictation for the previous sibling input/textarea
+    function startDictation(btn) {
+      const field = btn.previousElementSibling;
+      if (!field) return;
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { alert("Speech recognition not supported in this browser."); return; }
+      const rec = new SR();
+      rec.lang = "en-US";
+      rec.onresult = e => {
+        field.value += (field.value ? " " : "") + e.results[0][0].transcript;
+        field.focus();
+      };
+      rec.onerror = e => alert("Speech recognition error: " + e.error);
+      rec.start();
+    }
+  </script>
 </head>
 <body>
 
-<img src="/static/doctor.jpeg" class="doctor" alt="Doctor">
-<img src="/static/logo.png" class="logo" alt="Logo">
+  <div class="header">
+    <img src="/static/doctor.jpeg" alt="Doctor">
+    <img src="/static/logo.png" alt="Logo">
+  </div>
 
-<h1>Doctor AI</h1>
+  <h2>Doctor AI</h2>
 
-<div class="info-box">
-    <strong>Doctor AI</strong> is an <strong>educational tool</strong> designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is <strong>not a replacement</strong> for professional medical care—always consult a physician for medical concerns.
-    <br><br>
-    This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.
-    <br><br>
-    ✅ Please complete all fields to receive your summary. After clicking Submit, wait a few moments while your summary is generated. You can either type in each field or click on the 🎤 icon to use voice input.
-</div>
+  <div id="subscribe-banner" class="banner">
+    <strong>Want unlimited summaries & follow-ups?</strong>
+    <a href="{{ subscribe_url }}" target="_blank" rel="noopener">Subscribe here</a>.
+    After purchase, you’ll get a link that grants unlimited access.
+  </div>
 
-<form action="/" method="post">
-    <label>Your Email (required):</label>
-    <div class="input-wrapper">
-        <input type="email" name="email" required>
+  <div class="info-box">
+    <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is not a replacement for professional medical care—always consult a physician for medical concerns.</p>
+    <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
+    <p>✅ You can type in each field or click the <strong>🎤 microphone</strong> to use voice input.</p>
+  </div>
+
+  <form method="POST">
+    <div class="section">
+      <label for="email">Your Email (required):</label>
+      <input type="email" name="email" required autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>Describe your symptoms in detail. The more details you provide the more customized your summary:</label>
-    <div class="input-wrapper">
-        <textarea name="symptoms" required></textarea>
-        <span class="microphone-button" onclick="startDictation('symptoms')">🎤</span>
+    <div class="section">
+      <label for="symptoms">Describe your symptoms in detail. The more details you provide the more customized your summary:</label>
+      <textarea name="symptoms" rows="3" required autocomplete="off"></textarea>
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>Existing conditions (What are your current medical conditions):</label>
-    <div class="input-wrapper">
-        <textarea name="conditions" required></textarea>
-        <span class="microphone-button" onclick="startDictation('conditions')">🎤</span>
+    <div class="section">
+      <label for="existing_conditions">Existing conditions (What are your current medical conditions):</label>
+      <input type="text" name="existing_conditions" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>Allergies (Allergies to medications, food, or other items. If none, enter 'None'):</label>
-    <div class="input-wrapper">
-        <textarea name="allergies" required></textarea>
-        <span class="microphone-button" onclick="startDictation('allergies')">🎤</span>
+    <div class="section">
+      <label for="allergies">Allergies (Allergies to medications, food, or other items. If none, enter 'None'):</label>
+      <input type="text" name="allergies" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>Current medications:</label>
-    <div class="input-wrapper">
-        <textarea name="medications" required></textarea>
-        <span class="microphone-button" onclick="startDictation('medications')">🎤</span>
+    <div class="section">
+      <label for="medications">Current medications (What medications do you take?):</label>
+      <input type="text" name="medications" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>When did it start?</label>
-    <div class="input-wrapper">
-        <textarea name="onset" required></textarea>
-        <span class="microphone-button" onclick="startDictation('onset')">🎤</span>
+    <div class="section">
+      <label for="onset">When did it start? (When did your current symptoms start?)</label>
+      <input type="text" name="onset" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>What makes it better? (If not sure, enter 'NA'):</label>
-    <div class="input-wrapper">
-        <textarea name="better" required></textarea>
-        <span class="microphone-button" onclick="startDictation('better')">🎤</span>
+    <div class="section">
+      <label for="better">What makes it better? (If not sure, enter 'NA'):</label>
+      <input type="text" name="better" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>What makes it worse? (If not sure, enter 'NA'):</label>
-    <div class="input-wrapper">
-        <textarea name="worse" required></textarea>
-        <span class="microphone-button" onclick="startDictation('worse')">🎤</span>
+    <div class="section">
+      <label for="worse">What makes it worse? (If not sure, enter 'NA'):</label>
+      <input type="text" name="worse" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>Severity (1–10) (10 is the most severe):</label>
-    <div class="input-wrapper">
-        <input type="text" name="severity" required>
-        <span class="microphone-button" onclick="startDictation('severity')">🎤</span>
+    <div class="section">
+      <label for="severity">Severity (1–10) (10 is the most severe):</label>
+      <input type="text" name="severity" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <label>What have you tried for this condition?</label>
-    <div class="input-wrapper">
-        <textarea name="tried" required></textarea>
-        <span class="microphone-button" onclick="startDictation('tried')">🎤</span>
+    <div class="section">
+      <label for="treatments">What have you tried? (What medications or remedies have you tried?):</label>
+      <input type="text" name="treatments" autocomplete="off">
+      <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
     </div>
 
-    <button type="submit" class="btn">Submit</button>
-</form>
+    <div class="section">
+      <label for="age_range">Age Range:</label>
+      <select name="age_range" autocomplete="off">
+        <option value="0-12">0–12</option>
+        <option value="13-19">13–19</option>
+        <option value="20-40">20–40</option>
+        <option value="41-60">41–60</option>
+        <option value="61+">61+</option>
+      </select>
+    </div>
 
-<div style="text-align: center;">
-    <p><strong>Want to ask more follow-up questions?</strong></p>
-    <a href="https://payhip.com/b/nfRzK" target="_blank">
-        <button class="btn btn-subscribe">🔵 Subscribe for Unlimited Access</button>
-    </a>
-</div>
+    <div class="section">
+      <label for="sex">Sex/Gender:</label>
+      <select name="sex" autocomplete="off">
+        <option value="female">Female</option>
+        <option value="male">Male</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
 
-<div id="summaryModal">
+    <div class="reminder">
+      ⚠️ <strong>Please complete all fields.</strong> After clicking <strong>Submit</strong>, please wait a few moments while your personalized summary is generated.
+    </div>
+
+    <button type="submit" class="submit-btn">Submit</button>
+
+    <!-- CTA under the form -->
+    <div style="margin-top:12px;">
+      <a class="subscribe-btn" href="{{ subscribe_url }}" target="_blank" rel="noopener">Subscribe for Unlimited Access</a>
+    </div>
+  </form>
+
+  <!-- MODAL: Summary + follow-up -->
+  <div id="modal" class="modal-backdrop">
     <div class="modal-content">
-        <h2>📄 Doctor AI Summary:</h2>
-        <div id="summaryText"></div>
-        <div id="followUpContainer">
-            <label for="followUp">Have a follow-up question?</label>
-            <textarea id="followUp" rows="3" style="width: 100%;"></textarea>
-            <button onclick="submitFollowUp()" class="btn">Submit Follow-up Question</button>
+      <span class="modal-close" onclick="closeModal()">✖</span>
+      <h3 class="modal-title">📝 Doctor AI Summary</h3>
+      <div style="white-space: pre-wrap;">{{ response|safe }}</div>
+
+      <hr style="margin: 16px 0;">
+
+      <form method="POST" action="/followup">
+        <label for="followup"><strong>Have a follow-up question?</strong></label>
+        <textarea name="followup" rows="2" placeholder="Ask your follow-up..." required autocomplete="off"></textarea>
+        <button type="button" class="mic-button" onclick="startDictation(this)">🎤</button>
+        <div style="margin-top:10px;">
+          <button class="submit-btn" type="submit">Submit Follow-up Question</button>
         </div>
-        <div id="subscribeMessage" style="margin-top: 20px; text-align: center;">
-            <p>🔒 You've reached the free follow-up limit. Please subscribe to ask more questions.</p>
-            <a href="https://payhip.com/b/nfRzK" target="_blank">
-                <button class="btn btn-subscribe">🔓 Subscribe for Unlimited Access</button>
-            </a>
-        </div>
+      </form>
+
+      <!-- CTA in modal as well -->
+      <div style="margin-top:14px;">
+        <a class="subscribe-btn" href="{{ subscribe_url }}" target="_blank" rel="noopener">Subscribe for Unlimited Access</a>
+      </div>
     </div>
-</div>
-
-<script>
-function startDictation(field) {
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.onresult = function(event) {
-        document.getElementsByName(field)[0].value = event.results[0][0].transcript;
-    };
-    recognition.start();
-}
-
-function submitFollowUp() {
-    alert("Follow-up submitted (functionality to be added).");
-}
-</script>
-
+  </div>
 </body>
 </html>

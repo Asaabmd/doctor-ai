@@ -1,131 +1,232 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, make_response, jsonify
 import openai
-import json
 import os
+import json
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Load subscriptions from JSON file
-def load_subscriptions():
+# ---- CONFIG ----
+SUBSCRIPTION_FILE = "subscriptions.json"
+SUBSCRIBE_URL = "https://payhip.com/order?link=Da82I&pricing_plan=Q7zqKb9ZGg"  # update if you change plans
+
+# ---- HELPERS ----
+def is_subscribed(email: str) -> bool:
+    """Return True if email is active/manually granted in subscriptions.json."""
+    if not email:
+        return False
     try:
-        with open("subscriptions.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
+        with open(SUBSCRIPTION_FILE, "r") as f:
+            data = json.load(f)
+        return data.get(email.lower(), "").lower() in ["active", "manual"]
+    except Exception:
+        return False
 
-# Save usage flag in response cookie
-def save_usage_cookie(response, used_summary=False, used_followup=False):
-    response.set_cookie("used_summary", "true" if used_summary else "false")
-    response.set_cookie("used_followup", "true" if used_followup else "false")
+def ask_chatgpt(symptoms: str, context: dict) -> str:
+    """Call GPT to generate the educational summary."""
+    context_summary = "\n".join([
+        f"Age Range: {context.get('age_range', 'unknown')}",
+        f"Sex/Gender: {context.get('sex', 'unknown')}",
+        f"Known Conditions: {context.get('existing_conditions', 'unknown')}",
+        f"Allergies: {context.get('allergies', 'unknown')}",
+        f"Medications: {context.get('medications', 'unknown')}",
+        f"Onset: {context.get('onset', 'unknown')}",
+        f"What Makes It Better: {context.get('better', 'unknown')}",
+        f"What Makes It Worse: {context.get('worse', 'unknown')}",
+        f"Severity (1–10): {context.get('severity', 'unknown')}",
+        f"Treatments Tried: {context.get('treatments', 'unknown')}",
+    ])
 
-# Check if user has already used free summary/follow-up
-def has_used(request):
-    return (
-        request.cookies.get("used_summary") == "true",
-        request.cookies.get("used_followup") == "true"
+    prompt = (
+        "You are a board-certified family medicine physician writing an educational summary.\n\n"
+        f"Patient profile and HPI:\n{context_summary}\n\n"
+        f"Reported symptoms:\n{symptoms}\n\n"
+        "Please include:\n"
+        "1) Differential diagnosis (possible causes)\n"
+        "2) Common OTC medications (avoid Rx)\n"
+        "3) Helpful home/lifestyle measures\n"
+        "4) Red flags requiring urgent care\n"
+        "5) A strong disclaimer that this is educational only\n\n"
+        "Use clear headings and bullet points. Consider timing, severity, and prior treatments."
     )
 
-# Home page with form
-@app.route("/", methods=["GET"])
+    resp = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system",
+             "content": "You are a cautious, educational AI medical assistant. Avoid treatment or diagnostic claims."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.6
+    )
+    return resp["choices"][0]["message"]["content"]
+
+# ---- ROUTES ----
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html")
+    # Recognize Payhip redirect (?access=granted) and set long-lived cookie
+    if request.args.get("access") == "granted":
+        resp = make_response(render_template("index.html",
+                                             response="",
+                                             modal_shown=False,
+                                             show_subscribe_banner=False,
+                                             subscribe_url=SUBSCRIBE_URL,
+                                             use_count=0))
+        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)  # 1 year
+        return resp
 
-# Handle form submission
-@app.route("/", methods=["POST"])
-def generate_summary():
-    email = request.form.get("email", "").strip().lower()
-    subscriptions = load_subscriptions()
-    is_subscribed = subscriptions.get(email) in ["active", "manual"]
+    # Read cookies
+    has_access = request.cookies.get("access_granted") == "true"
+    use_count = int(request.cookies.get("use_count", 0))
+    cookie_email = (request.cookies.get("email") or "").strip().lower()
 
-    used_summary, _ = has_used(request)
+    # Determine subscription status
+    subscribed = has_access or is_subscribed(cookie_email)
 
-    if not is_subscribed and used_summary:
-        return make_response("Free summary already used. Please subscribe for unlimited access.", 403)
+    # If form submitted
+    if request.method == "POST":
+        # Pull form data
+        email = (request.form.get("email") or "").strip().lower()
+        symptoms = request.form.get("symptoms", "").strip()
 
-    user_input = {
-        "Symptoms": request.form.get("symptoms", ""),
-        "Existing conditions": request.form.get("conditions", ""),
-        "Allergies": request.form.get("allergies", ""),
-        "Medications": request.form.get("medications", ""),
-        "Onset": request.form.get("onset", ""),
-        "What makes it better": request.form.get("better", ""),
-        "What makes it worse": request.form.get("worse", ""),
-        "Severity": request.form.get("severity", ""),
-        "What has been tried": request.form.get("tried", "")
-    }
+        context = {
+            "existing_conditions": request.form.get("existing_conditions", "").strip(),
+            "allergies": request.form.get("allergies", "").strip(),
+            "medications": request.form.get("medications", "").strip(),
+            "onset": request.form.get("onset", "").strip(),
+            "better": request.form.get("better", "").strip(),
+            "worse": request.form.get("worse", "").strip(),
+            "severity": request.form.get("severity", "").strip(),
+            "treatments": request.form.get("treatments", "").strip(),
+            "age_range": request.form.get("age_range", "").strip(),
+            "sex": request.form.get("sex", "").strip(),
+        }
 
-    prompt = "Generate a friendly, easy-to-understand summary based on this information:\n"
-    for key, value in user_input.items():
-        prompt += f"{key}: {value}\n"
+        # Re-evaluate subscription with latest email
+        subscribed = subscribed or is_subscribed(email)
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800
-        )
-        summary = response['choices'][0]['message']['content'].strip()
-    except Exception as e:
-        return make_response(f"Error generating summary: {e}", 500)
+        # Enforce 1 summary if not subscribed
+        if not subscribed and use_count >= 1:
+            # Already used free summary; block further summaries
+            return render_template(
+                "index.html",
+                response=("🔒 This free version allows one summary and one follow-up. "
+                          "Subscribe below for unlimited access."),
+                modal_shown=True,  # show modal with the lock text so it's obvious
+                show_subscribe_banner=True,
+                subscribe_url=SUBSCRIBE_URL,
+                use_count=use_count
+            )
 
-    resp = make_response(render_template("index.html", summary=summary, show_modal=True, email=email, subscribed=is_subscribed))
-    if not is_subscribed:
-        save_usage_cookie(resp, used_summary=True)
-    return resp
+        # Generate summary
+        try:
+            summary = ask_chatgpt(symptoms, context)
+        except Exception as e:
+            summary = f"⚠️ Error: {e}"
 
-# Handle follow-up question
+        # Build response
+        resp = make_response(render_template(
+            "index.html",
+            response=summary,
+            modal_shown=True,  # pop the modal automatically
+            show_subscribe_banner=(not subscribed),
+            subscribe_url=SUBSCRIBE_URL,
+            use_count=(use_count + (0 if subscribed else 1))  # count summary if free user
+        ))
+
+        # Persist cookies (email for matching subscription; use_count for free users)
+        if email:
+            resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
+        if not subscribed:
+            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
+
+        return resp
+
+    # GET request (initial load)
+    return render_template(
+        "index.html",
+        response="",
+        modal_shown=False,
+        show_subscribe_banner=(not (has_access or is_subscribed(cookie_email))),
+        subscribe_url=SUBSCRIBE_URL,
+        use_count=use_count
+    )
+
 @app.route("/followup", methods=["POST"])
 def followup():
-    data = request.json
-    email = data.get("email", "").strip().lower()
-    question = data.get("question", "")
-    previous_summary = data.get("summary", "")
+    has_access = request.cookies.get("access_granted") == "true"
+    use_count = int(request.cookies.get("use_count", 0))
+    email = (request.cookies.get("email") or "").strip().lower()
+    subscribed = has_access or is_subscribed(email)
 
-    subscriptions = load_subscriptions()
-    is_subscribed = subscriptions.get(email) in ["active", "manual"]
-    _, used_followup = has_used(request)
+    # Enforce follow-up limit for free users (1 follow-up → second use)
+    if not subscribed and use_count >= 2:
+        return render_template(
+            "index.html",
+            response=("🔒 You’ve reached the free follow-up limit. "
+                      "Subscribe below for unlimited questions."),
+            modal_shown=True,
+            show_subscribe_banner=True,
+            subscribe_url=SUBSCRIBE_URL,
+            use_count=use_count
+        )
 
-    if not is_subscribed and used_followup:
-        return jsonify({"error": "limit_reached"})
-
-    prompt = f"This was the summary given:\n{previous_summary}\n\nUser's follow-up question: {question}\n\nProvide a helpful educational response."
+    question = request.form.get("followup", "").strip()
 
     try:
-        response = openai.ChatCompletion.create(
+        reply = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=600
+            messages=[
+                {"role": "system",
+                 "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
+                {"role": "user",
+                 "content": f"A patient has a follow-up question:\n\n{question}\n\n"
+                            "Please answer clearly and briefly, and remind them this is educational only."}
+            ],
+            temperature=0.6
         )
-        reply = response['choices'][0]['message']['content'].strip()
+        followup_text = reply["choices"][0]["message"]["content"]
     except Exception as e:
-        return jsonify({"error": f"OpenAI error: {str(e)}"})
+        followup_text = f"⚠️ Error: {e}"
 
-    resp = jsonify({"response": reply})
-    if not is_subscribed:
-        save_usage_cookie(resp, used_followup=True)
+    resp = make_response(render_template(
+        "index.html",
+        response=followup_text,
+        modal_shown=True,
+        show_subscribe_banner=(not subscribed),
+        subscribe_url=SUBSCRIBE_URL,
+        use_count=(use_count + (0 if subscribed else 1))
+    ))
+
+    if not subscribed:
+        resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
+
     return resp
 
-# Webhook for Payhip (optional for later use)
+# Optional webhook if you wire up Payhip to auto-update subscriptions.json
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
-    event = data.get("event")
-    email = data.get("data", {}).get("email", "").strip().lower()
-    if not email:
-        return "No email", 400
+    event = request.get_json(force=True, silent=True) or {}
+    event_type = (event.get("event_name") or "").lower()
+    email = (event.get("email") or "").strip().lower()
+    if not email or not event_type:
+        return jsonify({"status": "ignored", "reason": "missing event_name or email"}), 400
 
-    subscriptions = load_subscriptions()
+    try:
+        with open(SUBSCRIPTION_FILE, "r") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        data = {}
 
-    if event in ["subscription.created", "product.purchased"]:
-        subscriptions[email] = "active"
-    elif event in ["subscription.deleted", "subscription.cancelled"]:
-        subscriptions[email] = "inactive"
+    if event_type in ["subscription.created", "paid"]:
+        data[email] = "active"
+    elif event_type in ["subscription.deleted", "refunded"]:
+        data[email] = "inactive"
 
-    with open("subscriptions.json", "w") as f:
-        json.dump(subscriptions, f, indent=2)
+    with open(SUBSCRIPTION_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
-    return "OK", 200
+    return jsonify({"status": "ok", "email": email, "event": event_type}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
