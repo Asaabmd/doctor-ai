@@ -5,10 +5,14 @@ import json
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
 SUBSCRIPTION_FILE = "subscriptions.json"
 
-# 🔄 Helper to check subscription status
+# ----------------------
+# Helper Functions
+# ----------------------
 def is_subscribed(email: str) -> bool:
+    """Check if the user is subscribed based on subscriptions.json."""
     try:
         with open(SUBSCRIPTION_FILE, "r") as f:
             data = json.load(f)
@@ -16,8 +20,9 @@ def is_subscribed(email: str) -> bool:
     except Exception:
         return False
 
-# 🤖 Generate summary from ChatGPT
-def ask_chatgpt(symptoms: str, context: dict) -> str:
+
+def ask_chatgpt_summary(symptoms: str, context: dict) -> str:
+    """Generate a personalized summary from ChatGPT."""
     context_summary = "\n".join([
         f"Age Range: {context.get('age_range', 'unknown')}",
         f"Sex/Gender: {context.get('sex', 'unknown')}",
@@ -54,25 +59,40 @@ def ask_chatgpt(symptoms: str, context: dict) -> str:
     )
     return response['choices'][0]['message']['content']
 
-# 🌐 Homepage
+
+def ask_chatgpt_followup(question: str) -> str:
+    """Generate a follow-up response from ChatGPT."""
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
+            {"role": "user", "content": f"A patient has a follow-up question:\n\n{question}\n\nPlease answer clearly and briefly, and remind them this is educational only."}
+        ],
+        temperature=0.6
+    )
+    return response['choices'][0]['message']['content']
+
+# ----------------------
+# Routes
+# ----------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    email = request.cookies.get("email")
+    email = request.cookies.get("email", "").strip().lower()
     has_access = request.cookies.get("access_granted") == "true"
     use_count = int(request.cookies.get("use_count", 0))
+    summary = ""
+    followup_answer = ""
 
-    # Step 1: Payhip ?access=granted logic
-    if request.args.get("access") == "granted":
-        resp = make_response(render_template("index.html", response="", use_count=use_count))
-        resp.set_cookie("access_granted", "true", max_age=60 * 60 * 24 * 365)
-        return resp
-
-    # Step 2: Enforce usage limits
-    if not (has_access or is_subscribed(email or "")) and use_count >= 1 and request.method == "POST":
-        return render_template("index.html", response="🔒 This free version allows only one summary and one follow-up. Please subscribe for unlimited access.", use_count=use_count)
-
-    output = ""
+    # Handle form submission
     if request.method == "POST":
+        # Check free usage limit
+        if not (has_access or is_subscribed(email)) and use_count >= 1:
+            return render_template(
+                "index.html",
+                response="🔒 This free version allows only one summary and one follow-up. Please subscribe for unlimited access.",
+                use_count=use_count
+            )
+
         # Get form data
         email = request.form.get("email", "").strip().lower()
         symptoms = request.form.get("symptoms", "")
@@ -90,57 +110,61 @@ def index():
         }
 
         try:
-            output = ask_chatgpt(symptoms, context)
+            summary = ask_chatgpt_summary(symptoms, context)
         except Exception as e:
-            output = f"⚠️ Error: {e}"
+            summary = f"⚠️ Error generating summary: {e}"
 
-        # If not subscribed, increment use count and set cookies
+        resp = make_response(render_template(
+            "index.html",
+            response=summary,
+            followup_response="",
+            use_count=use_count + 1
+        ))
+        resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
         if not (has_access or is_subscribed(email)):
-            resp = make_response(render_template("index.html", response=output, use_count=use_count + 1))
             resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
-            resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
-            return resp
-
-    return render_template("index.html", response=output, use_count=use_count)
-
-# ➕ Follow-up question route
-@app.route("/followup", methods=["POST"])
-def followup():
-    email = request.cookies.get("email")
-    has_access = request.cookies.get("access_granted") == "true"
-    use_count = int(request.cookies.get("use_count", 0))
-
-    # Enforce follow-up limit
-    if not (has_access or is_subscribed(email or "")) and use_count >= 2:
-        return render_template("index.html", response="🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions.", use_count=use_count)
-
-    question = request.form.get("followup", "")
-    try:
-        reply = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a careful and informative AI doctor. Clarify medical questions in a safe, educational manner."},
-                {"role": "user", "content": f"A patient has a follow-up question:\n\n{question}\n\nPlease answer clearly and briefly, and remind them this is educational only."}
-            ],
-            temperature=0.6
-        )
-        followup_response = reply['choices'][0]['message']['content']
-    except Exception as e:
-        followup_response = f"⚠️ Error: {e}"
-
-    # If not subscribed, increment use count
-    if not (has_access or is_subscribed(email)):
-        resp = make_response(render_template("index.html", response=followup_response, use_count=use_count + 1))
-        resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
         return resp
 
-    return render_template("index.html", response=followup_response, use_count=use_count)
+    return render_template("index.html", response=summary, followup_response=followup_answer, use_count=use_count)
 
-# ✅ Webhook route to handle Payhip events
+
+@app.route("/followup", methods=["POST"])
+def followup():
+    email = request.cookies.get("email", "").strip().lower()
+    has_access = request.cookies.get("access_granted") == "true"
+    use_count = int(request.cookies.get("use_count", 0))
+    original_summary = request.form.get("original_summary", "")
+
+    # Check limit
+    if not (has_access or is_subscribed(email)) and use_count >= 2:
+        return render_template(
+            "index.html",
+            response=original_summary,
+            followup_response="🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions.",
+            use_count=use_count
+        )
+
+    # Get follow-up
+    question = request.form.get("followup", "")
+    try:
+        followup_answer = ask_chatgpt_followup(question)
+    except Exception as e:
+        followup_answer = f"⚠️ Error generating follow-up: {e}"
+
+    resp = make_response(render_template(
+        "index.html",
+        response=original_summary,
+        followup_response=followup_answer,
+        use_count=use_count + 1
+    ))
+    if not (has_access or is_subscribed(email)):
+        resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
+    return resp
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     event = request.get_json()
-
     if not event or "event_name" not in event or "email" not in event:
         return jsonify({"status": "ignored", "reason": "missing event_name or email"}), 400
 
@@ -163,6 +187,6 @@ def webhook():
 
     return jsonify({"status": "success", "email": email, "event": event_type}), 200
 
-# 🚀 Run the app
+
 if __name__ == "__main__":
     app.run(debug=True)

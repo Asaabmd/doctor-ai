@@ -91,9 +91,10 @@
         });
       });
 
-      // Auto-open summary modal if Flask sent a response
-      const hasResponse = "{{ response|default('', true) }}".length > 0;
-      if (hasResponse) openModal();
+      // Auto-open summary modal if Flask told us to
+      {% if show_modal %}
+        openModal();
+      {% endif %}
 
       // HTTPS warning for mic
       if (location.protocol !== 'https:') {
@@ -103,12 +104,18 @@
 
     // Modal helpers
     function openModal(){
-      document.getElementById('modal-backdrop').style.display='flex';
-      document.body.style.overflow='hidden';
+      const mb = document.getElementById('modal-backdrop');
+      if (mb) {
+        mb.style.display='flex';
+        document.body.style.overflow='hidden';
+      }
     }
     function closeModal(){
-      document.getElementById('modal-backdrop').style.display='none';
-      document.body.style.overflow='';
+      const mb = document.getElementById('modal-backdrop');
+      if (mb) {
+        mb.style.display='none';
+        document.body.style.overflow='';
+      }
     }
 
     // Speech Recognition
@@ -330,11 +337,19 @@
       <div class="modal">
         <button class="close" onclick="closeModal()">Close</button>
         <h3 id="summary-title">📋 Doctor AI Summary</h3>
+
         <div id="summary-body">
           {{ response|safe }}
+          {% if followup_response %}
+            <hr>
+            <strong>Follow-up:</strong>
+            <div>{{ followup_response|safe }}</div>
+          {% endif %}
         </div>
 
         <form method="POST" action="/followup" style="margin-top:14px">
+          <!-- Keep the original summary so the follow-up route can re-render it -->
+          <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
           <label for="followup">Have a follow-up question?</label>
           <textarea id="followup" name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
           <div class="mic-wrap">
@@ -348,8 +363,7 @@
 
         <p class="subtext" style="margin-top:10px">Reached your free limit? Subscribe to unlock unlimited summaries and follow-ups.</p>
         <div class="cta-row" style="margin-top:6px">
-          <a class="cta" href="https://payhip.com/order?link=Da82I&pricing_plan=Q7zqKb9ZGg
-" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
+          <a class="cta" href="https://payhip.com/order?link=Da82I&pricing_plan=Q7zqKb9ZGg" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
         </div>
       </div>
     </div>
