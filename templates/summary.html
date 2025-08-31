@@ -1,173 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Doctor AI Summary</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>Doctor AI - Summary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root {
-      --blue: #0b72d9;
-      --blue-100: #e6f0ff;
-      --blue-600: #065bb0;
-      --text: #0f172a;
-      --bg: #f0f8ff;
-      --ok: #16a34a;
-      --warn: #b45309;
-    }
-    html, body {
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f8fbff;
+      color: #0f172a;
       margin: 0;
       padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     }
+
     .wrap {
-      max-width: 1000px;
-      margin: 0 auto;
+      max-width: 900px;
+      margin: auto;
       padding: 20px;
     }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .header img {
-      height: 60px;
-    }
+
     h1 {
       text-align: center;
-      color: #004d99;
+      color: #065bb0;
     }
-    .result-box {
+
+    .card {
       background: #fff;
-      border: 1px solid #bfd6ff;
-      border-radius: 10px;
+      border: 1px solid #e2e8f0;
       padding: 20px;
-      margin-top: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
     }
-    .result-box h2 {
+
+    .card h2 {
+      color: #0b72d9;
       margin-top: 0;
-      color: var(--blue-600);
     }
-    .field {
-      margin: 14px 0;
+
+    .followup-section {
+      background: #e6f0ff;
+      border-left: 5px solid #0b72d9;
+      padding: 16px;
+      border-radius: 8px;
     }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 6px;
-    }
+
     textarea {
       width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 16px;
       min-height: 80px;
-      resize: vertical;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
     }
-    .mic-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 6px;
-    }
+
     .mic-btn {
-      padding: 6px 10px;
-      background: #dbeafe;
+      margin-top: 8px;
+      background: #cce5ff;
       border: 1px solid #93c5fd;
       border-radius: 6px;
+      padding: 6px 12px;
+      font-weight: bold;
       cursor: pointer;
-      font-weight: 500;
     }
+
     .submit {
-      background: var(--blue);
+      background: #0b72d9;
       color: white;
-      padding: 12px 18px;
-      font-size: 16px;
+      padding: 12px 20px;
       border: none;
       border-radius: 6px;
-      margin-top: 20px;
       cursor: pointer;
-      font-weight: bold;
-    }
-    .subtext {
-      font-size: 14px;
-      color: #475569;
-      margin-top: 16px;
-    }
-    .cta {
-      display: inline-block;
-      background: var(--blue);
-      color: white;
-      padding: 10px 14px;
-      text-decoration: none;
-      font-weight: bold;
-      border-radius: 6px;
+      font-size: 16px;
       margin-top: 10px;
     }
-    .cta:hover {
-      background: var(--blue-600);
+
+    .submit:hover {
+      background: #065bb0;
+    }
+
+    .response-box {
+      white-space: pre-wrap;
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      border: 1px solid #cbd5e1;
     }
   </style>
 
   <script>
-    function startDictation(btn, id) {
-      const field = document.getElementById(id);
-      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        alert("Your browser doesn't support speech recognition.");
+    function startFollowupDictation() {
+      const field = document.getElementById("followup");
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech recognition not supported.");
         return;
       }
-      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      rec.lang = "en-US";
-      rec.onresult = (event) => {
-        const text = event.results[0][0].transcript.trim();
-        field.value = field.value ? field.value + " " + text : text;
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        field.value += (field.value ? " " : "") + transcript;
         field.focus();
       };
-      rec.onerror = () => alert("Mic error. Please try again.");
-      rec.start();
+
+      recognition.onerror = () => {
+        alert("Mic error. Try again.");
+      };
+
+      recognition.onend = () => {
+        document.getElementById("followup").scrollIntoView({ behavior: "smooth" });
+      };
+
+      recognition.start();
     }
   </script>
 </head>
 <body>
   <div class="wrap">
-    <div class="header">
-      <img src="/static/doctor.jpeg" alt="Doctor" />
-      <img src="/static/logo.png" alt="Logo" />
-    </div>
-
     <h1>Doctor AI Summary</h1>
 
-    <div class="result-box">
-      <h2>🧠 Personalized Health Summary</h2>
-      <div>{{ response|safe }}</div>
-
-      {% if followup_response %}
-        <hr />
-        <h3>💬 Follow-Up Answer</h3>
-        <div>{{ followup_response|safe }}</div>
-      {% endif %}
-
-      {% if not is_subscribed %}
-        <p class="subtext">You've used your free session. Subscribe for unlimited summaries and follow-ups.</p>
-        <a class="cta" href="https://payhip.com/b/Da82I" target="_blank">🔓 Subscribe Now</a>
-      {% endif %}
-
-      {% if is_subscribed or not followup_response %}
-        <form method="POST" action="/followup" style="margin-top: 20px">
-          <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
-          <div class="field">
-            <label for="followup">Have a follow-up question?</label>
-            <textarea id="followup" name="followup" required placeholder="Ask your follow-up..."></textarea>
-            <div class="mic-wrap">
-              <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Use microphone</button>
-            </div>
-          </div>
-          <button type="submit" class="submit">Submit Follow-up</button>
-        </form>
-      {% endif %}
+    <div class="card">
+      <h2>Your Educational Summary:</h2>
+      <div class="response-box">{{ response }}</div>
     </div>
+
+    <div class="followup-section">
+      <h3>Have a follow-up question?</h3>
+      <form method="POST" action="/summary">
+        <textarea name="followup" id="followup" placeholder="Ask a follow-up question..."></textarea>
+        <br />
+        <button class="mic-btn" type="button" onclick="startFollowupDictation()">🎤 Speak</button>
+        <br />
+        <button class="submit" type="submit">Submit Follow-Up</button>
+      </form>
+    </div>
+
+    {% if followup_response %}
+    <div class="card">
+      <h2>Follow-Up Answer:</h2>
+      <div class="response-box">{{ followup_response }}</div>
+    </div>
+    {% endif %}
   </div>
 </body>
 </html>

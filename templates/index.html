@@ -2,146 +2,162 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Doctor AI</title>
+  <title>Doctor AI - Symptom Checker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       --blue: #0b72d9;
-      --blue-100: #e6f0ff;
-      --blue-600: #065bb0;
+      --blue-light: #e6f0ff;
+      --blue-dark: #065bb0;
       --text: #0f172a;
       --muted: #475569;
-      --bg: #f0f8ff;
+      --bg: #f8fbff;
     }
+
     html, body {
       margin: 0;
       padding: 0;
+      font-family: system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
     }
+
     .wrap {
-      max-width: 1000px;
-      margin: 0 auto;
+      max-width: 900px;
+      margin: auto;
       padding: 20px;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+
     .header img {
       height: 60px;
     }
+
     h1 {
       text-align: center;
-      color: #004d99;
+      color: var(--blue-dark);
     }
-    .banner {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
-      color: #7c2d12;
-      padding: 10px;
-      border-radius: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 12px 0;
-      flex-wrap: wrap;
-    }
-    .cta {
-      background: var(--blue);
-      color: white;
-      padding: 10px 14px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .cta:hover {
-      background: var(--blue-600);
-    }
+
     .info {
-      background: var(--blue-100);
-      padding: 14px;
-      border-left: 6px solid #004d99;
-      border-radius: 6px;
-      margin: 12px 0 24px;
+      background: var(--blue-light);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 5px solid var(--blue-dark);
     }
-    form .field {
-      margin: 14px 0;
+
+    .row {
+      margin-bottom: 14px;
     }
+
     label {
-      display: block;
       font-weight: bold;
-      margin-bottom: 6px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
     }
+
     input, textarea {
       width: 100%;
       padding: 10px;
-      border-radius: 6px;
       border: 1px solid #ccc;
+      border-radius: 6px;
       font-size: 16px;
     }
+
     textarea {
-      min-height: 80px;
-      resize: vertical;
+      min-height: 90px;
     }
+
     .mic-wrap {
       display: flex;
+      gap: 10px;
       align-items: center;
-      gap: 8px;
-      margin-top: 6px;
+      margin-top: 5px;
     }
+
     .mic-btn {
-      padding: 6px 10px;
-      background: #dbeafe;
+      padding: 6px 12px;
+      background: #cce5ff;
       border: 1px solid #93c5fd;
       border-radius: 6px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: bold;
     }
+
     .submit {
       background: var(--blue);
       color: white;
-      padding: 12px 18px;
-      font-size: 16px;
+      padding: 12px 20px;
       border: none;
       border-radius: 6px;
-      margin-top: 20px;
       cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    .submit:hover {
+      background: var(--blue-dark);
+    }
+
+    .reminder {
+      margin-top: 12px;
       font-weight: bold;
+      color: #b45309;
     }
   </style>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const fields = document.querySelectorAll("input, textarea");
+      const fields = Array.from(document.querySelectorAll("input, textarea"));
       fields.forEach((el, idx) => {
         el.addEventListener("keydown", (e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             const next = fields[idx + 1];
-            if (next) next.focus();
+            if (next) {
+              next.focus();
+              next.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
           }
         });
       });
     });
 
-    function startDictation(btn, id) {
-      const field = document.getElementById(id);
-      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        alert("Your browser doesn't support speech recognition.");
+    function startDictation(btn, fieldId) {
+      const field = document.getElementById(fieldId);
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech recognition not supported. Please use Chrome or Edge.");
         return;
       }
-      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      rec.lang = "en-US";
-      rec.onresult = (event) => {
-        const text = event.results[0][0].transcript.trim();
-        field.value = field.value ? field.value + " " + text : text;
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      btn.disabled = true;
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        field.value += (field.value ? " " : "") + transcript;
         field.focus();
       };
-      rec.onerror = () => alert("Mic error. Please try again.");
-      rec.start();
+      recognition.onerror = () => {
+        alert("Mic error. Try again.");
+      };
+      recognition.onend = () => {
+        btn.disabled = false;
+        const next = document.getElementById(fieldId).closest(".row").nextElementSibling;
+        if (next) next.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+      recognition.start();
     }
   </script>
 </head>
@@ -154,77 +170,80 @@
 
     <h1>Doctor AI</h1>
 
-    <div class="banner">
-      <div><strong>Unlock unlimited access</strong> for just $9/month.</div>
-      <a class="cta" href="https://payhip.com/b/Da82I" target="_blank">🔓 Subscribe Now</a>
-    </div>
-
     <div class="info">
-      <p><strong>Doctor AI</strong> helps you understand your symptoms. Just fill out the form and receive a personalized educational summary.</p>
-      <p>This is not a replacement for professional medical care.</p>
-      <p><strong>Tip:</strong> Use the 🎤 mic for faster input and press Enter to move to the next field.</p>
+      <p><strong>Doctor AI</strong> provides personalized, educational summaries based on your symptoms. It is <u>not a substitute for professional care</u>. Consult a physician for medical decisions.</p>
+      <p>This app offers one free session (summary + follow-up). Subscribed users get unlimited use.</p>
+      <p>You can type or click 🎤 to speak your answers. Press <strong>Enter</strong> to jump to the next question.</p>
     </div>
 
     <form method="POST" action="/">
-      <div class="field">
-        <label for="email">Email (required):</label>
+      <div class="row">
+        <label for="email">Your Email (required to track access)</label>
         <input type="email" id="email" name="email" required />
       </div>
 
-      <div class="field">
-        <label for="symptoms">Describe your symptoms:</label>
-        <textarea id="symptoms" name="symptoms" required></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'symptoms')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="symptoms">Describe your symptoms</label>
+        <textarea id="symptoms" name="symptoms" required placeholder="Describe your symptoms in detail. The more details you provide, the more customized your summary."></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'symptoms')">🎤 Speak</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="existing_conditions">What are your current medical conditions?</label>
-        <textarea id="existing_conditions" name="existing_conditions"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'existing_conditions')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="existing_conditions">Existing conditions</label>
+        <textarea id="existing_conditions" name="existing_conditions" placeholder="What are your current medical conditions?"></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'existing_conditions')">🎤 Speak</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="allergies">Allergies to medications, food, or other items. If none, enter 'None'.</label>
-        <textarea id="allergies" name="allergies"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'allergies')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="allergies">Allergies</label>
+        <textarea id="allergies" name="allergies" placeholder="Allergies to medications, food, or other items. If none, enter 'None'."></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'allergies')">🎤 Speak</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="medications">What medications do you take?</label>
-        <textarea id="medications" name="medications"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'medications')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="medications">Current medications</label>
+        <textarea id="medications" name="medications" placeholder="What medications do you take?"></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'medications')">🎤 Speak</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="onset">When did your current symptoms start?</label>
-        <textarea id="onset" name="onset"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'onset')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="onset">When did it start?</label>
+        <input type="text" id="onset" name="onset" placeholder="When did your current symptoms start?" />
       </div>
 
-      <div class="field">
-        <label for="better">What makes your symptoms better? If not sure, enter 'NA'.</label>
-        <textarea id="better" name="better"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'better')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="better">What makes it better?</label>
+        <input type="text" id="better" name="better" placeholder="What makes your symptoms better? If not sure, enter 'NA'." />
       </div>
 
-      <div class="field">
-        <label for="worse">What makes your symptoms worse? If not sure, enter 'NA'.</label>
-        <textarea id="worse" name="worse"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'worse')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="worse">What makes it worse?</label>
+        <input type="text" id="worse" name="worse" placeholder="What makes your symptoms worse? If not sure, enter 'NA'." />
       </div>
 
-      <div class="field">
-        <label for="severity">How severe are your symptoms? (1–10)</label>
-        <input type="number" id="severity" name="severity" min="1" max="10" />
+      <div class="row">
+        <label for="severity">Severity (1–10)</label>
+        <input type="text" id="severity" name="severity" placeholder="How severe are your symptoms? (10 is the most severe)" />
       </div>
 
-      <div class="field">
-        <label for="treatments">What medications or remedies have you tried for your symptoms?</label>
-        <textarea id="treatments" name="treatments"></textarea>
-        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'treatments')">🎤 Use microphone</button></div>
+      <div class="row">
+        <label for="treatments">What have you tried?</label>
+        <textarea id="treatments" name="treatments" placeholder="What medications or remedies have you tried for your symptoms?"></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'treatments')">🎤 Speak</button>
+        </div>
       </div>
 
-      <button type="submit" class="submit">🧠 Generate Summary</button>
+      <div class="reminder">⏳ Please complete all fields and wait a few moments after clicking Submit.</div>
+      <button class="submit" type="submit">Submit for Summary</button>
     </form>
   </div>
 </body>
