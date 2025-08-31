@@ -62,10 +62,6 @@
           }
         });
       });
-
-      if (location.protocol !== 'https:') {
-        console.warn('Speech Recognition requires HTTPS on most browsers.');
-      }
     });
 
     function startDictation(btn, fieldId) {
@@ -136,18 +132,13 @@
       <p class="check">✅ You can type in each field or click the <strong>microphone</strong> 🎤 to use voice input.</p>
     </div>
 
-    <!-- FORM -->
-    <form method="POST" action="/">
-      <!-- form inputs here (keep your current ones) -->
-      <!-- ... same as before ... -->
-    </form>
+    <!-- Form is dynamically rendered by Flask -->
+    {% block content %}{% endblock %}
 
-    <!-- Optional CTA again at bottom -->
     <div class="cta-row">
       <a class="cta secondary" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
     </div>
 
-    <!-- RESULT SECTION -->
     {% if response %}
     <div class="result-box" id="summary-box">
       <h3>📋 Doctor AI Summary</h3>
