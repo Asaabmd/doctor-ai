@@ -2,150 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Doctor AI - Summary</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doctor AI – Summary</title>
   <style>
     body {
-      font-family: system-ui, sans-serif;
-      background: #f8fbff;
-      color: #0f172a;
-      margin: 0;
-      padding: 0;
-    }
-
-    .wrap {
-      max-width: 900px;
-      margin: auto;
+      font-family: Arial, sans-serif;
       padding: 20px;
+      background: #f4f9ff;
+      color: #333;
     }
-
-    h1 {
-      text-align: center;
-      color: #065bb0;
+    h2 {
+      color: #00509e;
     }
-
-    .card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
+    .summary-box, .followup-box {
+      background-color: #fff;
+      border: 1px solid #cce0ff;
       padding: 20px;
-      border-radius: 10px;
       margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      white-space: pre-wrap;
     }
-
-    .card h2 {
-      color: #0b72d9;
-      margin-top: 0;
+    .form-group {
+      margin-bottom: 15px;
     }
-
-    .followup-section {
-      background: #e6f0ff;
-      border-left: 5px solid #0b72d9;
-      padding: 16px;
-      border-radius: 8px;
-    }
-
     textarea {
       width: 100%;
-      min-height: 80px;
       padding: 10px;
-      font-size: 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
     }
-
-    .mic-btn {
-      margin-top: 8px;
-      background: #cce5ff;
-      border: 1px solid #93c5fd;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .submit {
-      background: #0b72d9;
-      color: white;
-      padding: 12px 20px;
+    button {
+      background-color: #007bff;
+      color: #fff;
       border: none;
+      padding: 10px 20px;
+      font-size: 1em;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
     }
-
-    .submit:hover {
-      background: #065bb0;
+    button:hover {
+      background-color: #0056b3;
     }
-
-    .response-box {
-      white-space: pre-wrap;
-      background: #f1f5f9;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 10px;
-      border: 1px solid #cbd5e1;
+    .disclaimer {
+      font-size: 0.9em;
+      color: #555;
+      margin-top: 20px;
     }
   </style>
-
-  <script>
-    function startFollowupDictation() {
-      const field = document.getElementById("followup");
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("Speech recognition not supported.");
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim();
-        field.value += (field.value ? " " : "") + transcript;
-        field.focus();
-      };
-
-      recognition.onerror = () => {
-        alert("Mic error. Try again.");
-      };
-
-      recognition.onend = () => {
-        document.getElementById("followup").scrollIntoView({ behavior: "smooth" });
-      };
-
-      recognition.start();
-    }
-  </script>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Doctor AI Summary</h1>
+  <h2>🩺 Your Educational Health Summary</h2>
 
-    <div class="card">
-      <h2>Your Educational Summary:</h2>
-      <div class="response-box">{{ response }}</div>
-    </div>
+  <div class="summary-box">
+    {{ response }}
+  </div>
 
-    <div class="followup-section">
-      <h3>Have a follow-up question?</h3>
-      <form method="POST" action="/summary">
-        <textarea name="followup" id="followup" placeholder="Ask a follow-up question..."></textarea>
-        <br />
-        <button class="mic-btn" type="button" onclick="startFollowupDictation()">🎤 Speak</button>
-        <br />
-        <button class="submit" type="submit">Submit Follow-Up</button>
-      </form>
+  <form method="POST">
+    <div class="form-group">
+      <label for="followup"><strong>Have a follow-up question?</strong></label>
+      <textarea id="followup" name="followup" rows="4" placeholder="Ask a follow-up about your symptoms, treatments, or next steps..."></textarea>
     </div>
+    <button type="submit">Submit Follow-Up</button>
+  </form>
 
-    {% if followup_response %}
-    <div class="card">
-      <h2>Follow-Up Answer:</h2>
-      <div class="response-box">{{ followup_response }}</div>
+  {% if followup_response %}
+    <div class="followup-box">
+      <strong>Follow-Up Answer:</strong><br>
+      {{ followup_response }}
     </div>
-    {% endif %}
+  {% endif %}
+
+  <div class="disclaimer">
+    ⚠️ This summary is for educational purposes only and not a substitute for medical advice from a licensed physician.
   </div>
 </body>
 </html>
