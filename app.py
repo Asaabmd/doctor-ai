@@ -1,39 +1,14 @@
 from flask import Flask, render_template, request, jsonify
-import json
 import openai
+import json
+import os
 
 app = Flask(__name__)
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 USAGE_FILE = "usage.json"
 
-def is_subscribed(email):
-    try:
-        with open(SUBSCRIPTIONS_FILE, "r") as f:
-            subs = json.load(f)
-        return subs.get(email, {}).get("status") == "active"
-    except:
-        return False
-
-def has_used(email):
-    try:
-        with open(USAGE_FILE, "r") as f:
-            usage = json.load(f)
-        return usage.get(email, 0) >= 1
-    except:
-        return False
-
-def log_usage(email):
-    try:
-        with open(USAGE_FILE, "r") as f:
-            usage = json.load(f)
-    except:
-        usage = {}
-
-    usage[email] = usage.get(email, 0) + 1
-
-    with open(USAGE_FILE, "w") as f:
-        json.dump(usage, f)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def build_prompt(inputs):
     return f"""
@@ -52,6 +27,29 @@ Tried treatments: {inputs['tried']}
 Important: This is for educational purposes only and not a substitute for medical advice.
 """
 
+def is_subscribed(email):
+    if not os.path.exists(SUBSCRIPTIONS_FILE):
+        return False
+    with open(SUBSCRIPTIONS_FILE, "r") as f:
+        subs = json.load(f)
+    return subs.get(email, {}).get("status") == "active"
+
+def has_used(email):
+    if not os.path.exists(USAGE_FILE):
+        return False
+    with open(USAGE_FILE, "r") as f:
+        used = json.load(f)
+    return email in used
+
+def log_usage(email):
+    used = {}
+    if os.path.exists(USAGE_FILE):
+        with open(USAGE_FILE, "r") as f:
+            used = json.load(f)
+    used[email] = True
+    with open(USAGE_FILE, "w") as f:
+        json.dump(used, f)
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -68,14 +66,12 @@ def submit():
         return jsonify({"error": "free_limit_reached"}), 403
 
     prompt = build_prompt(data)
-
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
 
     summary = response.choices[0].message.content
-
     if not is_subscribed(email):
         log_usage(email)
 

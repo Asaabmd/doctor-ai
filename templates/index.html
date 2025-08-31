@@ -7,245 +7,175 @@
   <style>
     :root {
       --blue: #0b72d9;
-      --blue-100: #e6f0ff;
       --blue-600: #065bb0;
       --text: #0f172a;
       --muted: #475569;
       --bg: #f0f8ff;
-      --ok: #16a34a;
-      --warn: #b45309;
     }
-    html, body {
-      margin: 0; padding: 0;
+    body {
+      margin: 0;
+      padding: 0;
       background: var(--bg);
-      color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.45;
     }
-    .wrap { max-width: 1050px; margin: 0 auto; padding: 18px; }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .header img { height: 60px; }
-    h1 { margin: 10px 0 16px 0; text-align: center; color: #004d99; font-size: 28px; }
-    .banner {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
-      color: #7c2d12;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin: 8px 0 16px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    .cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--blue);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 14px;
-      text-decoration: none;
-      font-weight: 600;
+    h1 {
+      text-align: center;
+      color: var(--blue);
     }
-    .cta:hover { background: var(--blue-600); }
-    .info {
-      background: var(--blue-100);
-      border-left: 5px solid #004d99;
-      border-radius: 6px;
-      padding: 14px;
-      margin: 6px 0 18px 0;
+    label {
+      display: block;
+      font-weight: bold;
+      color: var(--muted);
+      margin-top: 12px;
     }
-    .info p { margin: 6px 0; }
-    .check { color: var(--ok); font-weight: 700; }
-    label { font-weight: 700; color: var(--muted); }
-    .row { margin: 12px 0; }
-    input, select, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
       font-size: 16px;
-      background: #fff;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
     }
-    textarea { min-height: 90px; resize: vertical; }
-    .mic-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
     .mic-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       background: #cce5ff;
       border: 1px solid #93c5fd;
       border-radius: 6px;
-      padding: 7px 10px;
+      padding: 6px 10px;
       cursor: pointer;
-      font-weight: 600;
     }
-    .mic-btn[disabled] { opacity: .6; cursor: not-allowed; }
-    .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid #93c5fd;
-      border-top-color: #1d4ed8;
-      border-radius: 50%;
-      display: none;
-      animation: spin .9s linear infinite;
-    }
-    .listening .spinner { display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
     .submit {
       background: var(--blue);
-      color: #fff;
+      color: white;
+      font-weight: bold;
       border: none;
       border-radius: 6px;
       padding: 10px 16px;
-      font-weight: 700;
       cursor: pointer;
     }
-    .submit:hover { background: var(--blue-600); }
-    .reminder { margin: 10px 0 4px 0; }
-    .cta-row { display: flex; justify-content: center; margin: 18px 0 4px; }
-    .cta.secondary { background: #1f7af0; }
-    .cta.secondary:hover { background: #155ec0; }
-    .result-box {
-      background: #f8fbff;
-      border: 1px solid #bfd6ff;
-      border-radius: 10px;
-      padding: 18px;
-      margin-top: 30px;
+    .submit:hover {
+      background: var(--blue-600);
     }
-    .result-box h3 { margin-top: 0; }
-    .subtext { color: #64748b; font-size: 14px; }
+    #results {
+      margin-top: 30px;
+      background: #e6f0ff;
+      padding: 16px;
+      border-radius: 8px;
+    }
   </style>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const tabbables = Array.from(document.querySelectorAll('input, select, textarea'));
-      tabbables.forEach((el, idx) => {
-        el.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const next = tabbables[idx + 1];
-            if (next) {
-              next.focus();
-              next.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
-        });
-      });
-    });
-
-    function startDictation(btn, fieldId) {
+    function startDictation(button, fieldId) {
       const field = document.getElementById(fieldId);
-      const Wrap = btn.closest('.mic-wrap');
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("Your browser doesn't support speech recognition. Please use Chrome or Edge on desktop.");
-        return;
-      }
-      if (location.protocol !== 'https:') {
-        alert('Speech recognition needs HTTPS. Please use the secure site (https://…).');
-        return;
-      }
       const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Rec) {
+        alert("Speech Recognition not supported");
+        return;
+      }
       const rec = new Rec();
       rec.lang = 'en-US';
       rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      btn.disabled = true;
-      Wrap.classList.add('listening');
-      let heard = false;
-      rec.onresult = (ev) => {
-        heard = true;
-        const t = ev.results[0][0].transcript.trim();
-        field.value = field.value ? (field.value + ' ' + t) : t;
+      button.disabled = true;
+      rec.onresult = (e) => {
+        field.value += (field.value ? ' ' : '') + e.results[0][0].transcript;
         field.focus();
       };
-      rec.onerror = (ev) => {
-        const code = (ev.error || '').toLowerCase();
-        if (code === 'not-allowed' || code === 'permission-denied') {
-          alert('Microphone permission was denied. Please allow mic access in your browser.');
-        } else if (code === 'no-speech') {
-          alert('I didn’t hear anything. Please try again and speak clearly.');
-        } else {
-          alert('Speech recognition error: ' + code);
-        }
-      };
-      rec.onend = () => {
-        btn.disabled = false;
-        Wrap.classList.remove('listening');
-        if (!heard) console.log('No speech captured.');
-      };
-      try { rec.start(); } catch (e) { rec.stop(); rec.start(); }
+      rec.onerror = () => alert('Speech recognition error');
+      rec.onend = () => button.disabled = false;
+      rec.start();
+    }
+
+    async function submitForm(event) {
+      event.preventDefault();
+      const form = event.target;
+      const data = Object.fromEntries(new FormData(form).entries());
+
+      const response = await fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const res = await response.json();
+      const resultsDiv = document.getElementById("results");
+
+      if (res.error === "free_limit_reached") {
+        resultsDiv.innerHTML = `<p>You’ve reached the free limit. Please <a href="https://payhip.com/b/Da82I" target="_blank">subscribe here</a>.</p>`;
+      } else if (res.summary) {
+        resultsDiv.innerHTML = `
+          <h2>Doctor AI Summary</h2>
+          <div>${res.summary}</div>
+          <form onsubmit="return followUp(event)">
+            <input type="hidden" name="summary" value="${encodeURIComponent(res.summary)}" />
+            <label for="followup">Have a follow-up question?</label>
+            <textarea id="followup" name="question"></textarea>
+            <button type="submit" class="submit">Submit Follow-up</button>
+          </form>
+          <div id="followup-response"></div>
+        `;
+      } else {
+        resultsDiv.innerHTML = `<p>Something went wrong. Try again.</p>`;
+      }
+    }
+
+    async function followUp(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const response = await fetch("/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const res = await response.json();
+      if (res.followup) {
+        document.getElementById("followup-response").innerHTML = `<h3>Follow-up Response</h3><div>${res.followup}</div>`;
+      }
     }
   </script>
 </head>
 <body>
   <div class="wrap">
-    <div class="header">
-      <img src="/static/doctor.jpeg" alt="Doctor" />
-      <img src="/static/logo.png" alt="Logo" />
-    </div>
-
     <h1>Doctor AI</h1>
+    <form onsubmit="submitForm(event)">
+      <label>Email</label>
+      <input id="email" name="email" type="email" required />
 
-    <div class="banner">
-      <div><strong>Want unlimited summaries & follow-ups?</strong> Subscribe and get instant unlimited access.</div>
-      <a class="cta" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
-    </div>
+      <label>Symptoms</label>
+      <textarea id="symptoms" name="symptoms"></textarea>
+      <button type="button" class="mic-btn" onclick="startDictation(this, 'symptoms')">🎤</button>
 
-    <div class="info">
-      <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is <em>not</em> a replacement for professional medical care—always consult a physician for medical concerns.</p>
-      <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
-      <p class="check">✅ You can type in each field or click the <strong>microphone</strong> 🎤 to use voice input.</p>
-    </div>
+      <label>Existing Conditions</label>
+      <input id="conditions" name="conditions" />
 
-    <!-- FULL FORM -->
-    <form method="POST" action="/">
-      {% for field in fields %}
-        <div class="row">
-          <label for="{{ field.id }}">{{ field.label }}</label>
-          <textarea id="{{ field.id }}" name="{{ field.name }}" required placeholder="{{ field.placeholder }}"></textarea>
-          <div class="mic-wrap">
-            <button class="mic-btn" type="button" onclick="startDictation(this, '{{ field.id }}')">🎤 Use microphone</button>
-            <span class="spinner"></span>
-          </div>
-        </div>
-      {% endfor %}
+      <label>Allergies</label>
+      <input id="allergies" name="allergies" />
+
+      <label>Medications</label>
+      <input id="medications" name="medications" />
+
+      <label>Onset</label>
+      <input id="onset" name="onset" />
+
+      <label>What makes it better?</label>
+      <input id="better" name="better" />
+
+      <label>What makes it worse?</label>
+      <input id="worse" name="worse" />
+
+      <label>Severity (1-10)</label>
+      <input id="severity" name="severity" />
+
+      <label>What have you tried?</label>
+      <input id="tried" name="tried" />
+
       <button class="submit" type="submit">Submit</button>
     </form>
-
-    <div class="cta-row">
-      <a class="cta secondary" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
-    </div>
-
-    {% if response %}
-    <div class="result-box" id="summary-box">
-      <h3>📋 Doctor AI Summary</h3>
-      <div>{{ response|safe }}</div>
-      {% if followup_response %}
-        <hr>
-        <strong>Follow-up Answer:</strong>
-        <div>{{ followup_response|safe }}</div>
-      {% endif %}
-      <form method="POST" action="/followup" style="margin-top:18px">
-        <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
-        <label for="followup">Have a follow-up question?</label>
-        <textarea id="followup" name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-        <button class="submit" type="submit" style="margin-top:10px">Submit Follow-up</button>
-      </form>
-      {% if not is_subscribed %}
-        <p class="subtext" style="margin-top:10px">You've used your one free session. Subscribe to unlock unlimited summaries and follow-ups.</p>
-        <div class="cta-row" style="margin-top:6px">
-          <a class="cta" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
-        </div>
-      {% endif %}
-    </div>
-    {% endif %}
+    <div id="results"></div>
   </div>
 </body>
 </html>
