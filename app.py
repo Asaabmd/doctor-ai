@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, make_response
+from flask import Flask, render_template, request, redirect, url_for, session
 import openai
 import os
 import json
 
 app = Flask(__name__)
-app.secret_key = "my_secret_key_12345"  # Hardcoded for session stability
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -42,8 +42,7 @@ Important: This is for educational purposes only and not a substitute for medica
     return response.choices[0].message.content
 
 
-def ask_chatgpt_followup(question):
-    summary = session.get("summary", "")
+def ask_chatgpt_followup(question, summary):
     followup_prompt = f"""
 User previously received this summary:
 \"{summary}\"
@@ -52,7 +51,6 @@ Now the user asks: {question}
 
 Please respond in a helpful and educational manner.
 """
-
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[{"role": "user", "content": followup_prompt}]
@@ -90,7 +88,6 @@ def index():
 
         try:
             summary = ask_chatgpt_summary(symptoms, context)
-            print("Generated Summary:", summary)
         except Exception as e:
             summary = f"⚠️ Error generating summary: {e}"
 
@@ -98,15 +95,17 @@ def index():
         session["email"] = email
         session["use_count"] = use_count + 1
 
-        # TEMPORARY: Directly render summary page instead of redirect
-        return render_template("summary.html", response=summary, followup_response="")
+        resp = redirect(url_for("summary_page"))
+        resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
+        if not (has_access or is_subscribed(email)):
+            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
+        return resp
 
     return render_template("index.html", response="", followup_response="", use_count=use_count)
 
 
 @app.route("/summary", methods=["GET", "POST"])
 def summary_page():
-    print("Session summary on summary page:", session.get("summary"))  # Debug line
     summary = session.get("summary", "")
     followup_answer = ""
     email = session.get("email", "")
@@ -114,13 +113,18 @@ def summary_page():
     has_access = request.cookies.get("access_granted") == "true"
 
     if request.method == "POST":
-        if not (has_access or is_subscribed(email)) and use_count >= 2:
+        question = request.form.get("followup", "").strip()
+        summary = summary or request.form.get("summary", "")
+
+        if not summary:
+            followup_answer = "⚠️ Error: Missing summary context. Please return to the form and try again."
+        elif not (has_access or is_subscribed(email)) and use_count >= 2:
             followup_answer = "🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions."
         else:
-            question = request.form.get("followup", "").strip()
             try:
-                followup_answer = ask_chatgpt_followup(question)
+                followup_answer = ask_chatgpt_followup(question, summary)
                 session["use_count"] = use_count + 1
+                session["summary"] = summary
             except Exception as e:
                 followup_answer = f"⚠️ Error generating follow-up: {e}"
 

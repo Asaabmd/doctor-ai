@@ -1,80 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Doctor AI – Summary</title>
+  <meta charset="UTF-8" />
+  <title>Doctor AI - Summary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f4f9ff;
-      color: #333;
-    }
-    h2 {
-      color: #00509e;
-    }
-    .summary-box, .followup-box {
-      background-color: #fff;
-      border: 1px solid #cce0ff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      white-space: pre-wrap;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    textarea {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    button {
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      font-size: 1em;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .disclaimer {
-      font-size: 0.9em;
-      color: #555;
-      margin-top: 20px;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    h1 { color: #0066cc; }
+    textarea, input[type="text"] { width: 100%; padding: 10px; margin-top: 10px; font-size: 1em; }
+    button { padding: 10px 20px; font-size: 1em; margin-top: 10px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 5px; }
+    button:hover { background-color: #0056b3; }
+    .mic { cursor: pointer; margin-left: 10px; font-size: 1.2em; }
+    .box { background: #f9f9f9; border-left: 5px solid #007BFF; padding: 15px; margin-bottom: 20px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
-  <h2>🩺 Your Educational Health Summary</h2>
-
-  <div class="summary-box">
+  <h1>🩺 Your AI Health Summary</h1>
+  <div class="box" id="summary-box">
     {{ response }}
   </div>
 
+  <h2>❓ Ask a Follow-up Question</h2>
   <form method="POST">
-    <div class="form-group">
-      <label for="followup"><strong>Have a follow-up question?</strong></label>
-      <textarea id="followup" name="followup" rows="4" placeholder="Ask a follow-up about your symptoms, treatments, or next steps..."></textarea>
+    <label for="followup">Type your follow-up question:</label>
+    <div style="display: flex; align-items: center;">
+      <input type="text" name="followup" id="followup" required />
+      <span class="mic" onclick="startDictation('followup')">🎤</span>
     </div>
-    <button type="submit">Submit Follow-Up</button>
+
+    <!-- Hidden summary field to ensure it’s passed even if session breaks -->
+    <input type="hidden" name="summary" value="{{ response|e }}" />
+
+    <button type="submit">Get Answer</button>
   </form>
 
   {% if followup_response %}
-    <div class="followup-box">
-      <strong>Follow-Up Answer:</strong><br>
-      {{ followup_response }}
-    </div>
+    <h2>💬 Response:</h2>
+    <div class="box">{{ followup_response }}</div>
   {% endif %}
 
-  <div class="disclaimer">
-    ⚠️ This summary is for educational purposes only and not a substitute for medical advice from a licensed physician.
-  </div>
+  <script>
+    function startDictation(fieldId) {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported in this browser.");
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById(fieldId).value = transcript;
+      };
+
+      recognition.start();
+    }
+  </script>
 </body>
 </html>
