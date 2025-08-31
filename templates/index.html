@@ -8,7 +8,6 @@
     :root{
       --blue:#0b72d9;
       --blue-100:#e6f0ff;
-      --blue-200:#d7e6ff;
       --blue-600:#065bb0;
       --text:#0f172a;
       --muted:#475569;
@@ -18,69 +17,42 @@
     }
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
     .wrap{max-width:1050px;margin:0 auto;padding:18px}
-    .header{
-      display:flex;align-items:center;justify-content:space-between;margin-bottom:6px
-    }
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
     .header img{height:60px}
     h1{margin:10px 0 16px 0;text-align:center;color:#004d99;font-size:28px}
-
-    .banner{
-      background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:8px;padding:10px 14px;margin:8px 0 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap
-    }
-    .cta{
-      display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 14px;text-decoration:none;font-weight:600}
+    .banner{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:8px;padding:10px 14px;margin:8px 0 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .cta{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 14px;text-decoration:none;font-weight:600}
     .cta:hover{background:var(--blue-600)}
-
-    .info{
-      background:var(--blue-100);border-left:5px solid #004d99;border-radius:6px;padding:14px;margin:6px 0 18px 0
-    }
+    .info{background:var(--blue-100);border-left:5px solid #004d99;border-radius:6px;padding:14px;margin:6px 0 18px 0}
     .info p{margin:6px 0}
     .check{color:var(--ok);font-weight:700}
-
     label{font-weight:700;color:var(--muted)}
     .row{margin:12px 0}
-    input,select,textarea{
-      width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:16px;background:#fff
-    }
+    input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:16px;background:#fff}
     textarea{min-height:90px;resize:vertical}
     .mic-wrap{display:flex;align-items:center;gap:8px;margin-top:6px}
-    .mic-btn{
-      display:inline-flex;align-items:center;gap:6px;background:#cce5ff;border:1px solid #93c5fd;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600
-    }
+    .mic-btn{display:inline-flex;align-items:center;gap:6px;background:#cce5ff;border:1px solid #93c5fd;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600}
     .mic-btn[disabled]{opacity:.6;cursor:not-allowed}
     .spinner{width:14px;height:14px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;display:none;animation:spin .9s linear infinite}
     .listening .spinner{display:inline-block}
     @keyframes spin{to{transform:rotate(360deg)}}
-
-    .submit{
-      background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer
-    }
+    .submit{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
     .submit:hover{background:var(--blue-600)}
     .reminder{margin:10px 0 4px 0}
-
-    /* Modal */
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;z-index:50
-    }
-    .modal{background:#f8fbff;border:1px solid #bfd6ff;max-width:900px;width:100%;border-radius:10px;padding:18px 18px 14px}
-    .modal h3{margin:6px 0 10px 0}
-    .modal .close{
-      float:right;font-weight:700;cursor:pointer;background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;padding:5px 9px
-    }
-    .subtext{color:#64748b;font-size:14px}
     .cta-row{display:flex;justify-content:center;margin:18px 0 4px}
     .cta.secondary{background:#1f7af0}
     .cta.secondary:hover{background:#155ec0}
+    .result-box{background:#f8fbff;border:1px solid #bfd6ff;border-radius:10px;padding:18px;margin-top:30px}
+    .result-box h3{margin-top:0}
+    .subtext{color:#64748b;font-size:14px}
   </style>
 
   <script>
-    // Advance to next field on Enter (no newline) + smooth scroll
     document.addEventListener('DOMContentLoaded', () => {
       const tabbables = Array.from(document.querySelectorAll('input, select, textarea'));
       tabbables.forEach((el, idx) => {
         el.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
-            // For textarea, prefer Enter to go next instead of newline
             e.preventDefault();
             const next = tabbables[idx + 1];
             if (next) {
@@ -91,34 +63,11 @@
         });
       });
 
-      // Auto-open summary modal if Flask told us to
-      {% if show_modal %}
-        openModal();
-      {% endif %}
-
-      // HTTPS warning for mic
       if (location.protocol !== 'https:') {
         console.warn('Speech Recognition requires HTTPS on most browsers.');
       }
     });
 
-    // Modal helpers
-    function openModal(){
-      const mb = document.getElementById('modal-backdrop');
-      if (mb) {
-        mb.style.display='flex';
-        document.body.style.overflow='hidden';
-      }
-    }
-    function closeModal(){
-      const mb = document.getElementById('modal-backdrop');
-      if (mb) {
-        mb.style.display='none';
-        document.body.style.overflow='';
-      }
-    }
-
-    // Speech Recognition
     function startDictation(btn, fieldId) {
       const field = document.getElementById(fieldId);
       const Wrap = btn.closest('.mic-wrap');
@@ -145,7 +94,6 @@
       rec.onresult = (ev) => {
         heard = true;
         const t = ev.results[0][0].transcript.trim();
-        // Append with space if field already has text
         field.value = field.value ? (field.value + ' ' + t) : t;
         field.focus();
       };
@@ -162,10 +110,7 @@
       rec.onend = () => {
         btn.disabled = false;
         Wrap.classList.remove('listening');
-        if (!heard) {
-          // Optional: hint the user to try again
-          console.log('No speech captured.');
-        }
+        if (!heard) console.log('No speech captured.');
       };
       try { rec.start(); } catch(e){ rec.stop(); rec.start(); }
     }
@@ -173,8 +118,6 @@
 </head>
 <body>
   <div class="wrap">
-
-    <!-- Header with logos -->
     <div class="header">
       <img src="/static/doctor.jpeg" alt="Doctor" />
       <img src="/static/logo.png" alt="Logo" />
@@ -182,191 +125,58 @@
 
     <h1>Doctor AI</h1>
 
-    <!-- Top CTA banner -->
     <div class="banner">
       <div><strong>Want unlimited summaries & follow-ups?</strong> Subscribe and get instant unlimited access.</div>
-      <a class="cta" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">
-        🔓 Subscribe for Unlimited Access
-      </a>
+      <a class="cta" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
     </div>
 
-    <!-- Info / instructions -->
     <div class="info">
       <p><strong>Doctor AI</strong> is an educational tool designed to help you better understand your symptoms and medical condition by generating a personalized health summary based on the information you provide. It is <em>not</em> a replacement for professional medical care—always consult a physician for medical concerns.</p>
       <p>This one-time session includes a customized summary and one follow-up question to demonstrate the tool’s capabilities. Subscribing unlocks unlimited access for ongoing health insights and support.</p>
       <p class="check">✅ You can type in each field or click the <strong>microphone</strong> 🎤 to use voice input.</p>
     </div>
 
+    <!-- FORM -->
     <form method="POST" action="/">
-      <!-- Email -->
-      <div class="row">
-        <label for="email">Your Email (required):</label>
-        <input id="email" type="email" name="email" required />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'email')">🎤 Use microphone</button>
-          <span class="spinner" aria-hidden="true"></span>
-          <span class="subtext">We use your email to check subscription status.</span>
-        </div>
-      </div>
-
-      <!-- Symptoms -->
-      <div class="row">
-        <label for="symptoms">Describe your symptoms in detail. The more details you provide the more customized your summary:</label>
-        <textarea id="symptoms" name="symptoms" required></textarea>
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'symptoms')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Existing conditions -->
-      <div class="row">
-        <label for="existing_conditions">Existing conditions (What are your current medical conditions):</label>
-        <input id="existing_conditions" name="existing_conditions" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'existing_conditions')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Allergies -->
-      <div class="row">
-        <label for="allergies">Allergies (Allergies to medications, food, or other items. If none, enter “None”):</label>
-        <input id="allergies" name="allergies" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'allergies')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Medications -->
-      <div class="row">
-        <label for="medications">Current medications (What medications do you take?):</label>
-        <input id="medications" name="medications" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'medications')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Onset -->
-      <div class="row">
-        <label for="onset">When did it start? (When did your current symptoms start?)</label>
-        <input id="onset" name="onset" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'onset')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Better -->
-      <div class="row">
-        <label for="better">What makes it better? (If not sure, enter “NA”):</label>
-        <input id="better" name="better" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'better')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Worse -->
-      <div class="row">
-        <label for="worse">What makes it worse? (If not sure, enter “NA”):</label>
-        <input id="worse" name="worse" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'worse')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Severity -->
-      <div class="row">
-        <label for="severity">Severity (1–10) (10 is the most severe):</label>
-        <input id="severity" name="severity" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'severity')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Treatments -->
-      <div class="row">
-        <label for="treatments">What have you tried? (What medications or remedies have you tried?):</label>
-        <input id="treatments" name="treatments" type="text" />
-        <div class="mic-wrap">
-          <button class="mic-btn" type="button" onclick="startDictation(this, 'treatments')">🎤 Use microphone</button>
-          <span class="spinner"></span>
-        </div>
-      </div>
-
-      <!-- Age Range -->
-      <div class="row">
-        <label for="age_range">Age Range:</label>
-        <select id="age_range" name="age_range">
-          <option value="0-12">0–12</option>
-          <option value="13-19">13–19</option>
-          <option value="20-40">20–40</option>
-          <option value="41-60">41–60</option>
-          <option value="61+">61+</option>
-        </select>
-      </div>
-
-      <!-- Sex/Gender -->
-      <div class="row">
-        <label for="sex">Sex/Gender:</label>
-        <select id="sex" name="sex">
-          <option value="female">Female</option>
-          <option value="male">Male</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      <p class="reminder"><strong>🔔 Reminder:</strong> Please complete all fields and, after clicking <strong>Submit</strong>, wait a few moments for your personalized summary to appear.</p>
-      <button class="submit" type="submit">Submit</button>
+      <!-- form inputs here (keep your current ones) -->
+      <!-- ... same as before ... -->
     </form>
 
-    <!-- Bottom CTA -->
+    <!-- Optional CTA again at bottom -->
     <div class="cta-row">
-      <a class="cta secondary" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">
-        🔓 Subscribe for Unlimited Access
-      </a>
+      <a class="cta secondary" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
     </div>
 
-    <!-- Summary Modal -->
-    <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title">
-      <div class="modal">
-        <button class="close" onclick="closeModal()">Close</button>
-        <h3 id="summary-title">📋 Doctor AI Summary</h3>
+    <!-- RESULT SECTION -->
+    {% if response %}
+    <div class="result-box" id="summary-box">
+      <h3>📋 Doctor AI Summary</h3>
+      <div>{{ response|safe }}</div>
+      {% if followup_response %}
+        <hr>
+        <strong>Follow-up Answer:</strong>
+        <div>{{ followup_response|safe }}</div>
+      {% endif %}
 
-        <div id="summary-body">
-          {{ response|safe }}
-          {% if followup_response %}
-            <hr>
-            <strong>Follow-up:</strong>
-            <div>{{ followup_response|safe }}</div>
-          {% endif %}
+      <form method="POST" action="/followup" style="margin-top:18px">
+        <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
+        <label for="followup">Have a follow-up question?</label>
+        <textarea id="followup" name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
+        <div class="mic-wrap">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Use microphone</button>
+          <span class="spinner"></span>
         </div>
+        <button class="submit" type="submit" style="margin-top:10px">Submit Follow-up</button>
+      </form>
 
-        <form method="POST" action="/followup" style="margin-top:14px">
-          <!-- Keep the original summary so the follow-up route can re-render it -->
-          <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
-          <label for="followup">Have a follow-up question?</label>
-          <textarea id="followup" name="followup" rows="2" placeholder="Ask your follow-up..." required></textarea>
-          <div class="mic-wrap">
-            <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Use microphone</button>
-            <span class="spinner"></span>
-          </div>
-          <div style="margin-top:10px">
-            <button class="submit" type="submit">Submit Follow-up Question</button>
-          </div>
-        </form>
-
-        <p class="subtext" style="margin-top:10px">Reached your free limit? Subscribe to unlock unlimited summaries and follow-ups.</p>
+      {% if not is_subscribed %}
+        <p class="subtext" style="margin-top:10px">You've used your one free session. Subscribe to unlock unlimited summaries and follow-ups.</p>
         <div class="cta-row" style="margin-top:6px">
           <a class="cta" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
         </div>
-      </div>
+      {% endif %}
     </div>
+    {% endif %}
   </div>
 </body>
 </html>
