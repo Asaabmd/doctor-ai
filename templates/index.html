@@ -7,175 +7,225 @@
   <style>
     :root {
       --blue: #0b72d9;
+      --blue-100: #e6f0ff;
       --blue-600: #065bb0;
       --text: #0f172a;
       --muted: #475569;
       --bg: #f0f8ff;
     }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       background: var(--bg);
+      color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     }
     .wrap {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
       padding: 20px;
     }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header img {
+      height: 60px;
+    }
     h1 {
       text-align: center;
-      color: var(--blue);
+      color: #004d99;
+    }
+    .banner {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #7c2d12;
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .cta {
+      background: var(--blue);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .cta:hover {
+      background: var(--blue-600);
+    }
+    .info {
+      background: var(--blue-100);
+      padding: 14px;
+      border-left: 6px solid #004d99;
+      border-radius: 6px;
+      margin: 12px 0 24px;
+    }
+    form .field {
+      margin: 14px 0;
     }
     label {
       display: block;
       font-weight: bold;
-      color: var(--muted);
-      margin-top: 12px;
+      margin-bottom: 6px;
     }
-    input, textarea, select {
+    input, textarea {
       width: 100%;
       padding: 10px;
-      font-size: 16px;
-      margin-top: 4px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
       border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .mic-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
     }
     .mic-btn {
-      background: #cce5ff;
+      padding: 6px 10px;
+      background: #dbeafe;
       border: 1px solid #93c5fd;
       border-radius: 6px;
-      padding: 6px 10px;
       cursor: pointer;
+      font-weight: 500;
     }
     .submit {
       background: var(--blue);
       color: white;
-      font-weight: bold;
+      padding: 12px 18px;
+      font-size: 16px;
       border: none;
       border-radius: 6px;
-      padding: 10px 16px;
+      margin-top: 20px;
       cursor: pointer;
-    }
-    .submit:hover {
-      background: var(--blue-600);
-    }
-    #results {
-      margin-top: 30px;
-      background: #e6f0ff;
-      padding: 16px;
-      border-radius: 8px;
+      font-weight: bold;
     }
   </style>
+
   <script>
-    function startDictation(button, fieldId) {
-      const field = document.getElementById(fieldId);
-      const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!Rec) {
-        alert("Speech Recognition not supported");
+    document.addEventListener("DOMContentLoaded", () => {
+      const fields = document.querySelectorAll("input, textarea");
+      fields.forEach((el, idx) => {
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            const next = fields[idx + 1];
+            if (next) next.focus();
+          }
+        });
+      });
+    });
+
+    function startDictation(btn, id) {
+      const field = document.getElementById(id);
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        alert("Your browser doesn't support speech recognition.");
         return;
       }
-      const rec = new Rec();
-      rec.lang = 'en-US';
-      rec.interimResults = false;
-      button.disabled = true;
-      rec.onresult = (e) => {
-        field.value += (field.value ? ' ' : '') + e.results[0][0].transcript;
+      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      rec.lang = "en-US";
+      rec.onresult = (event) => {
+        const text = event.results[0][0].transcript.trim();
+        field.value = field.value ? field.value + " " + text : text;
         field.focus();
       };
-      rec.onerror = () => alert('Speech recognition error');
-      rec.onend = () => button.disabled = false;
+      rec.onerror = () => alert("Mic error. Please try again.");
       rec.start();
-    }
-
-    async function submitForm(event) {
-      event.preventDefault();
-      const form = event.target;
-      const data = Object.fromEntries(new FormData(form).entries());
-
-      const response = await fetch("/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      const res = await response.json();
-      const resultsDiv = document.getElementById("results");
-
-      if (res.error === "free_limit_reached") {
-        resultsDiv.innerHTML = `<p>You’ve reached the free limit. Please <a href="https://payhip.com/b/Da82I" target="_blank">subscribe here</a>.</p>`;
-      } else if (res.summary) {
-        resultsDiv.innerHTML = `
-          <h2>Doctor AI Summary</h2>
-          <div>${res.summary}</div>
-          <form onsubmit="return followUp(event)">
-            <input type="hidden" name="summary" value="${encodeURIComponent(res.summary)}" />
-            <label for="followup">Have a follow-up question?</label>
-            <textarea id="followup" name="question"></textarea>
-            <button type="submit" class="submit">Submit Follow-up</button>
-          </form>
-          <div id="followup-response"></div>
-        `;
-      } else {
-        resultsDiv.innerHTML = `<p>Something went wrong. Try again.</p>`;
-      }
-    }
-
-    async function followUp(e) {
-      e.preventDefault();
-      const form = e.target;
-      const data = Object.fromEntries(new FormData(form).entries());
-      const response = await fetch("/followup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      const res = await response.json();
-      if (res.followup) {
-        document.getElementById("followup-response").innerHTML = `<h3>Follow-up Response</h3><div>${res.followup}</div>`;
-      }
     }
   </script>
 </head>
 <body>
   <div class="wrap">
+    <div class="header">
+      <img src="/static/doctor.jpeg" alt="Doctor" />
+      <img src="/static/logo.png" alt="Logo" />
+    </div>
+
     <h1>Doctor AI</h1>
-    <form onsubmit="submitForm(event)">
-      <label>Email</label>
-      <input id="email" name="email" type="email" required />
 
-      <label>Symptoms</label>
-      <textarea id="symptoms" name="symptoms"></textarea>
-      <button type="button" class="mic-btn" onclick="startDictation(this, 'symptoms')">🎤</button>
+    <div class="banner">
+      <div><strong>Unlock unlimited access</strong> for just $9/month.</div>
+      <a class="cta" href="https://payhip.com/b/Da82I" target="_blank">🔓 Subscribe Now</a>
+    </div>
 
-      <label>Existing Conditions</label>
-      <input id="conditions" name="conditions" />
+    <div class="info">
+      <p><strong>Doctor AI</strong> helps you understand your symptoms. Just fill out the form and receive a personalized educational summary.</p>
+      <p>This is not a replacement for professional medical care.</p>
+      <p><strong>Tip:</strong> Use the 🎤 mic for faster input and press Enter to move to the next field.</p>
+    </div>
 
-      <label>Allergies</label>
-      <input id="allergies" name="allergies" />
+    <form method="POST" action="/">
+      <div class="field">
+        <label for="email">Email (required):</label>
+        <input type="email" id="email" name="email" required />
+      </div>
 
-      <label>Medications</label>
-      <input id="medications" name="medications" />
+      <div class="field">
+        <label for="symptoms">Describe your symptoms:</label>
+        <textarea id="symptoms" name="symptoms" required></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'symptoms')">🎤 Use microphone</button></div>
+      </div>
 
-      <label>Onset</label>
-      <input id="onset" name="onset" />
+      <div class="field">
+        <label for="existing_conditions">What are your current medical conditions?</label>
+        <textarea id="existing_conditions" name="existing_conditions"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'existing_conditions')">🎤 Use microphone</button></div>
+      </div>
 
-      <label>What makes it better?</label>
-      <input id="better" name="better" />
+      <div class="field">
+        <label for="allergies">Allergies to medications, food, or other items. If none, enter 'None'.</label>
+        <textarea id="allergies" name="allergies"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'allergies')">🎤 Use microphone</button></div>
+      </div>
 
-      <label>What makes it worse?</label>
-      <input id="worse" name="worse" />
+      <div class="field">
+        <label for="medications">What medications do you take?</label>
+        <textarea id="medications" name="medications"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'medications')">🎤 Use microphone</button></div>
+      </div>
 
-      <label>Severity (1-10)</label>
-      <input id="severity" name="severity" />
+      <div class="field">
+        <label for="onset">When did your current symptoms start?</label>
+        <textarea id="onset" name="onset"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'onset')">🎤 Use microphone</button></div>
+      </div>
 
-      <label>What have you tried?</label>
-      <input id="tried" name="tried" />
+      <div class="field">
+        <label for="better">What makes your symptoms better? If not sure, enter 'NA'.</label>
+        <textarea id="better" name="better"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'better')">🎤 Use microphone</button></div>
+      </div>
 
-      <button class="submit" type="submit">Submit</button>
+      <div class="field">
+        <label for="worse">What makes your symptoms worse? If not sure, enter 'NA'.</label>
+        <textarea id="worse" name="worse"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'worse')">🎤 Use microphone</button></div>
+      </div>
+
+      <div class="field">
+        <label for="severity">How severe are your symptoms? (1–10)</label>
+        <input type="number" id="severity" name="severity" min="1" max="10" />
+      </div>
+
+      <div class="field">
+        <label for="treatments">What medications or remedies have you tried for your symptoms?</label>
+        <textarea id="treatments" name="treatments"></textarea>
+        <div class="mic-wrap"><button class="mic-btn" type="button" onclick="startDictation(this, 'treatments')">🎤 Use microphone</button></div>
+      </div>
+
+      <button type="submit" class="submit">🧠 Generate Summary</button>
     </form>
-    <div id="results"></div>
   </div>
 </body>
 </html>
