@@ -1,111 +1,131 @@
-from flask import Flask, render_template, request, redirect, url_for
-Patient is experiencing the following symptoms:
-{data['symptoms']}
+from flask import Flask, render_template, request, jsonify
+import json
+import openai
 
+app = Flask(__name__)
 
-Existing conditions: {data['existing_conditions']}
-Allergies: {data['allergies']}
-Medications: {data['medications']}
-Symptom onset: {data['onset']}
-What makes it better: {data['better']}
-What makes it worse: {data['worse']}
-Severity: {data['severity']}
-Treatments tried: {data['treatments']}
-Age range: {data['age_range']}
-Sex: {data['sex']}
+SUBSCRIPTIONS_FILE = "subscriptions.json"
+USAGE_FILE = "usage.json"
 
+def is_subscribed(email):
+    try:
+        with open(SUBSCRIPTIONS_FILE, "r") as f:
+            subs = json.load(f)
+        return subs.get(email, {}).get("status") == "active"
+    except:
+        return False
 
-Based on this, provide an educational and personalized summary including possible causes, over-the-counter treatment, home remedies, and when to seek medical attention. Do not give specific diagnoses or prescriptions.
+def has_used(email):
+    try:
+        with open(USAGE_FILE, "r") as f:
+            usage = json.load(f)
+        return usage.get(email, 0) >= 1
+    except:
+        return False
+
+def log_usage(email):
+    try:
+        with open(USAGE_FILE, "r") as f:
+            usage = json.load(f)
+    except:
+        usage = {}
+
+    usage[email] = usage.get(email, 0) + 1
+
+    with open(USAGE_FILE, "w") as f:
+        json.dump(usage, f)
+
+def build_prompt(inputs):
+    return f"""
+You are a helpful AI doctor. Summarize the following symptoms and provide a differential diagnosis, red flags, home remedies, and over-the-counter options.
+
+Symptoms: {inputs['symptoms']}
+Existing Conditions: {inputs['conditions']}
+Allergies: {inputs['allergies']}
+Medications: {inputs['medications']}
+Onset: {inputs['onset']}
+Better with: {inputs['better']}
+Worse with: {inputs['worse']}
+Severity: {inputs['severity']}
+Tried treatments: {inputs['tried']}
+
+Important: This is for educational purposes only and not a substitute for medical advice.
 """
 
-
-response = openai.ChatCompletion.create(
-model="gpt-4",
-messages=[
-{"role": "system", "content": "You are an educational medical assistant, not a doctor."},
-{"role": "user", "content": prompt}
-]
-)
-return response.choices[0].message.content
-
-
-def generate_followup(original_summary, followup_question):
-prompt = f"""
-Based on this summary:
-{original_summary}
-
-
-Answer this follow-up question:
-{followup_question}
-
-
-Keep the answer short, educational, and general.
-"""
-
-
-response = openai.ChatCompletion.create(
-model="gpt-4",
-messages=[
-{"role": "system", "content": "You are a helpful health explainer."},
-{"role": "user", "content": prompt}
-]
-)
-return response.choices[0].message.content
-
-
-@app.route('/', methods=['GET', 'POST'])
+@app.route("/")
 def index():
-if request.method == 'POST':
-email = request.form['email'].strip().lower()
-form_data = request.form.to_dict()
-subscribed = is_subscribed(email)
-already_used = has_used(email)
+    return render_template("index.html")
 
+@app.route("/submit", methods=["POST"])
+def submit():
+    data = request.json
+    email = data.get("email")
 
-if not subscribed and already_used:
-return render_template('index.html', error="You've already used your free session.", subscribed=False)
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
 
+    if not is_subscribed(email) and has_used(email):
+        return jsonify({"error": "free_limit_reached"}), 403
 
-summary = generate_summary(form_data)
+    prompt = build_prompt(data)
 
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
 
-if not subscribed:
-mark_used(email)
+    summary = response.choices[0].message.content
 
+    if not is_subscribed(email):
+        log_usage(email)
 
-return render_template('index.html', response=summary, email=email, subscribed=subscribed)
+    return jsonify({"summary": summary})
 
-
-return render_template('index.html')
-
-
-@app.route('/followup', methods=['POST'])
+@app.route("/followup", methods=["POST"])
 def followup():
-email = request.form.get('email', '').strip().lower()
-original = request.form['original_summary']
-question = request.form['followup']
-answer = generate_followup(original, question)
-subscribed = is_subscribed(email)
+    data = request.json
+    email = data.get("email")
+    question = data.get("question")
+    summary = data.get("summary")
 
+    if not is_subscribed(email):
+        return jsonify({"error": "Subscription required for follow-up."}), 403
 
-return render_template('index.html', response=original, followup_response=answer, email=email, subscribed=subscribed)
+    followup_prompt = f"""
+User previously received this summary:
+"{summary}"
 
+Now the user asks: {question}
 
-@app.route('/webhook', methods=['POST'])
+Please respond in a helpful and educational manner.
+"""
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": followup_prompt}]
+    )
+
+    followup_answer = response.choices[0].message.content
+    return jsonify({"followup": followup_answer})
+
+@app.route("/webhook", methods=["POST"])
 def webhook():
-data = request.get_json()
-email = data.get('email', '').strip().lower()
-status = data.get('status', 'inactive')
+    event = request.json
+    email = event.get("email")
+    event_type = event.get("event")
 
+    with open(SUBSCRIPTIONS_FILE, "r") as f:
+        subs = json.load(f)
 
-if email:
-subs = load_json(SUB_FILE)
-subs[email] = {'status': status}
-save_json(SUB_FILE, subs)
+    if event_type in ["subscription.created", "subscription.updated", "subscription.paid"]:
+        subs[email] = {"status": "active"}
+    elif event_type in ["subscription.deleted", "subscription.refunded"]:
+        subs[email] = {"status": "inactive"}
 
+    with open(SUBSCRIPTIONS_FILE, "w") as f:
+        json.dump(subs, f)
 
-return '', 200
+    return "", 200
 
-
-if __name__ == '__main__':
-app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True)
