@@ -4,7 +4,7 @@ import os
 import json
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
+app.secret_key = "my_secret_key_12345"  # Hardcoded for session stability
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -90,6 +90,7 @@ def index():
 
         try:
             summary = ask_chatgpt_summary(symptoms, context)
+            print("Generated Summary:", summary)
         except Exception as e:
             summary = f"⚠️ Error generating summary: {e}"
 
@@ -97,17 +98,15 @@ def index():
         session["email"] = email
         session["use_count"] = use_count + 1
 
-        resp = redirect(url_for("summary_page"))
-        resp.set_cookie("email", email, max_age=60 * 60 * 24 * 365)
-        if not (has_access or is_subscribed(email)):
-            resp.set_cookie("use_count", str(use_count + 1), max_age=60 * 60 * 24 * 30)
-        return resp
+        # TEMPORARY: Directly render summary page instead of redirect
+        return render_template("summary.html", response=summary, followup_response="")
 
     return render_template("index.html", response="", followup_response="", use_count=use_count)
 
 
 @app.route("/summary", methods=["GET", "POST"])
 def summary_page():
+    print("Session summary on summary page:", session.get("summary"))  # Debug line
     summary = session.get("summary", "")
     followup_answer = ""
     email = session.get("email", "")
