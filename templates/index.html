@@ -5,48 +5,120 @@
   <title>Doctor AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --blue:#0b72d9;
-      --blue-100:#e6f0ff;
-      --blue-600:#065bb0;
-      --text:#0f172a;
-      --muted:#475569;
-      --bg:#f0f8ff;
-      --ok:#16a34a;
-      --warn:#b45309;
+    :root {
+      --blue: #0b72d9;
+      --blue-100: #e6f0ff;
+      --blue-600: #065bb0;
+      --text: #0f172a;
+      --muted: #475569;
+      --bg: #f0f8ff;
+      --ok: #16a34a;
+      --warn: #b45309;
     }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
-    .wrap{max-width:1050px;margin:0 auto;padding:18px}
-    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-    .header img{height:60px}
-    h1{margin:10px 0 16px 0;text-align:center;color:#004d99;font-size:28px}
-    .banner{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:8px;padding:10px 14px;margin:8px 0 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .cta{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 14px;text-decoration:none;font-weight:600}
-    .cta:hover{background:var(--blue-600)}
-    .info{background:var(--blue-100);border-left:5px solid #004d99;border-radius:6px;padding:14px;margin:6px 0 18px 0}
-    .info p{margin:6px 0}
-    .check{color:var(--ok);font-weight:700}
-    label{font-weight:700;color:var(--muted)}
-    .row{margin:12px 0}
-    input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:16px;background:#fff}
-    textarea{min-height:90px;resize:vertical}
-    .mic-wrap{display:flex;align-items:center;gap:8px;margin-top:6px}
-    .mic-btn{display:inline-flex;align-items:center;gap:6px;background:#cce5ff;border:1px solid #93c5fd;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600}
-    .mic-btn[disabled]{opacity:.6;cursor:not-allowed}
-    .spinner{width:14px;height:14px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;display:none;animation:spin .9s linear infinite}
-    .listening .spinner{display:inline-block}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .submit{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
-    .submit:hover{background:var(--blue-600)}
-    .reminder{margin:10px 0 4px 0}
-    .cta-row{display:flex;justify-content:center;margin:18px 0 4px}
-    .cta.secondary{background:#1f7af0}
-    .cta.secondary:hover{background:#155ec0}
-    .result-box{background:#f8fbff;border:1px solid #bfd6ff;border-radius:10px;padding:18px;margin-top:30px}
-    .result-box h3{margin-top:0}
-    .subtext{color:#64748b;font-size:14px}
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1050px; margin: 0 auto; padding: 18px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .header img { height: 60px; }
+    h1 { margin: 10px 0 16px 0; text-align: center; color: #004d99; font-size: 28px; }
+    .banner {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #7c2d12;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 8px 0 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .cta:hover { background: var(--blue-600); }
+    .info {
+      background: var(--blue-100);
+      border-left: 5px solid #004d99;
+      border-radius: 6px;
+      padding: 14px;
+      margin: 6px 0 18px 0;
+    }
+    .info p { margin: 6px 0; }
+    .check { color: var(--ok); font-weight: 700; }
+    label { font-weight: 700; color: var(--muted); }
+    .row { margin: 12px 0; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 16px;
+      background: #fff;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .mic-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .mic-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #cce5ff;
+      border: 1px solid #93c5fd;
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .mic-btn[disabled] { opacity: .6; cursor: not-allowed; }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #93c5fd;
+      border-top-color: #1d4ed8;
+      border-radius: 50%;
+      display: none;
+      animation: spin .9s linear infinite;
+    }
+    .listening .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .submit {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .submit:hover { background: var(--blue-600); }
+    .reminder { margin: 10px 0 4px 0; }
+    .cta-row { display: flex; justify-content: center; margin: 18px 0 4px; }
+    .cta.secondary { background: #1f7af0; }
+    .cta.secondary:hover { background: #155ec0; }
+    .result-box {
+      background: #f8fbff;
+      border: 1px solid #bfd6ff;
+      border-radius: 10px;
+      padding: 18px;
+      margin-top: 30px;
+    }
+    .result-box h3 { margin-top: 0; }
+    .subtext { color: #64748b; font-size: 14px; }
   </style>
-
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const tabbables = Array.from(document.querySelectorAll('input, select, textarea'));
@@ -57,7 +129,7 @@
             const next = tabbables[idx + 1];
             if (next) {
               next.focus();
-              next.scrollIntoView({behavior:'smooth', block:'center'});
+              next.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }
         });
@@ -75,18 +147,14 @@
         alert('Speech recognition needs HTTPS. Please use the secure site (https://…).');
         return;
       }
-
       const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
       const rec = new Rec();
       rec.lang = 'en-US';
       rec.interimResults = false;
       rec.maxAlternatives = 1;
-
       btn.disabled = true;
       Wrap.classList.add('listening');
-
       let heard = false;
-
       rec.onresult = (ev) => {
         heard = true;
         const t = ev.results[0][0].transcript.trim();
@@ -108,7 +176,7 @@
         Wrap.classList.remove('listening');
         if (!heard) console.log('No speech captured.');
       };
-      try { rec.start(); } catch(e){ rec.stop(); rec.start(); }
+      try { rec.start(); } catch (e) { rec.stop(); rec.start(); }
     }
   </script>
 </head>
@@ -132,8 +200,20 @@
       <p class="check">✅ You can type in each field or click the <strong>microphone</strong> 🎤 to use voice input.</p>
     </div>
 
-    <!-- Form is dynamically rendered by Flask -->
-    {% block content %}{% endblock %}
+    <!-- FULL FORM -->
+    <form method="POST" action="/">
+      {% for field in fields %}
+        <div class="row">
+          <label for="{{ field.id }}">{{ field.label }}</label>
+          <textarea id="{{ field.id }}" name="{{ field.name }}" required placeholder="{{ field.placeholder }}"></textarea>
+          <div class="mic-wrap">
+            <button class="mic-btn" type="button" onclick="startDictation(this, '{{ field.id }}')">🎤 Use microphone</button>
+            <span class="spinner"></span>
+          </div>
+        </div>
+      {% endfor %}
+      <button class="submit" type="submit">Submit</button>
+    </form>
 
     <div class="cta-row">
       <a class="cta secondary" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">🔓 Subscribe for Unlimited Access</a>
@@ -148,7 +228,6 @@
         <strong>Follow-up Answer:</strong>
         <div>{{ followup_response|safe }}</div>
       {% endif %}
-
       <form method="POST" action="/followup" style="margin-top:18px">
         <input type="hidden" name="original_summary" value='{{ response|tojson|safe }}'>
         <label for="followup">Have a follow-up question?</label>
@@ -159,7 +238,6 @@
         </div>
         <button class="submit" type="submit" style="margin-top:10px">Submit Follow-up</button>
       </form>
-
       {% if not is_subscribed %}
         <p class="subtext" style="margin-top:10px">You've used your one free session. Subscribe to unlock unlimited summaries and follow-ups.</p>
         <div class="cta-row" style="margin-top:6px">
