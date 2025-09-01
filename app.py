@@ -64,6 +64,12 @@ def index():
     use_count = int(request.cookies.get("use_count", 0))
 
     if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        symptoms = request.form.get("symptoms", "").strip()
+
+        if not symptoms:
+            return render_template("index.html", response="⚠️ Please describe your symptoms.", followup_response="", use_count=use_count)
+
         if not (has_access or is_subscribed(email)) and use_count >= 1:
             return render_template(
                 "index.html",
@@ -72,8 +78,6 @@ def index():
                 use_count=use_count
             )
 
-        email = (request.form.get("email") or "").strip().lower()
-        symptoms = request.form.get("symptoms", "").strip()
         context = {
             "existing_conditions": request.form.get("existing_conditions", "skip"),
             "allergies": request.form.get("allergies", "skip"),
@@ -87,8 +91,10 @@ def index():
 
         try:
             summary = ask_chatgpt_summary(symptoms, context)
+            print("✅ Summary generated successfully.")
         except Exception as e:
             summary = f"⚠️ Error generating summary: {e}"
+            print("❌ Error in summary generation:", e)
 
         session["summary"] = summary
         session["email"] = email
@@ -111,16 +117,24 @@ def summary_page():
     has_access = request.cookies.get("access_granted") == "true"
     followup_answer = ""
 
+    if not summary:
+        print("⚠️ No summary in session. Redirecting to home.")
+        return redirect(url_for("index"))
+
     if request.method == "POST":
         if not (has_access or is_subscribed(email)) and use_count >= 2:
             followup_answer = "🔒 You’ve reached the free follow-up limit. Please subscribe to ask more questions."
         else:
             question = request.form.get("followup", "").strip()
-            try:
-                followup_answer = ask_chatgpt_followup(question, summary)
-                session["use_count"] = use_count + 1
-            except Exception as e:
-                followup_answer = f"⚠️ Error generating follow-up: {e}"
+            if not question:
+                followup_answer = "⚠️ Please enter a follow-up question."
+            else:
+                try:
+                    followup_answer = ask_chatgpt_followup(question, summary)
+                    session["use_count"] = use_count + 1
+                except Exception as e:
+                    followup_answer = f"⚠️ Error generating follow-up: {e}"
+                    print("❌ Follow-up error:", e)
 
     return render_template("summary.html", response=summary, followup_response=followup_answer)
 
