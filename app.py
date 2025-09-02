@@ -2,45 +2,46 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import os, json, logging
 from datetime import datetime
 
-# -------- Logging --------
+# ---------- Logging ----------
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("doctor-ai")
 
-# -------- Flask --------
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
 
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 if not OPENAI_API_KEY:
-    log.warning("OPENAI_API_KEY not set. Summaries will show a friendly message.")
+    log.warning("OPENAI_API_KEY not set. Will show a friendly error to users.")
 
-# Try to support BOTH OpenAI SDK versions:
-# v1: from openai import OpenAI  -> client.chat.completions.create(...)
-# legacy: import openai -> openai.ChatCompletion.create(...)
+# --- Support both OpenAI SDKs ---
 client = None
 use_v1_client = False
+sdk_version = "unknown"
 try:
-    # Try v1 client
+    # v1 client
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else OpenAI()
     use_v1_client = True
-    log.info("Using OpenAI v1 client.")
+    sdk_version = "v1"
+    log.info("Using OpenAI v1 client")
 except Exception:
-    # Fallback: legacy
     try:
+        # legacy client
         import openai  # type: ignore
         if OPENAI_API_KEY:
             openai.api_key = OPENAI_API_KEY
         client = openai
         use_v1_client = False
-        log.info("Using legacy OpenAI client.")
-    except Exception as e:
+        sdk_version = "legacy"
+        log.info("Using legacy OpenAI client")
+    except Exception:
         client = None
-        log.exception("Failed to import any OpenAI client")
+        sdk_version = "none"
+        log.exception("No OpenAI client available")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 
-# -------- Subscription helpers --------
+# ---------- Subscription helpers ----------
 def load_subs() -> dict:
     try:
         with open(SUBSCRIPTIONS_FILE, "r") as f:
@@ -71,28 +72,43 @@ def is_subscribed(email: str, req=None) -> bool:
         pass
     return bool(file_access or cookie_access)
 
-# -------- OpenAI helpers (dual mode) --------
-def chat_complete(messages, temperature=0.6):
-    """Call OpenAI chat completions across SDK versions."""
-    if not OPENAI_API_KEY or not client:
-        raise RuntimeError("OpenAI API key or client not configured")
+# ---------- OpenAI helpers ----------
+TRY_MODELS_V1 = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"]
+TRY_MODELS_LEGACY = ["gpt-4", "gpt-3.5-turbo"]
 
+def chat_complete(messages, temperature=0.6):
+    """
+    Try several models until one succeeds.
+    Returns (text, model_used) or raises RuntimeError with detail.
+    """
+    if not OPENAI_API_KEY or not client:
+        raise RuntimeError("OpenAI client or API key not configured")
+
+    errors = []
     if use_v1_client:
-        # v1 style
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",  # fast/cheap; change to gpt-4o if you prefer
-            messages=messages,
-            temperature=temperature,
-        )
-        return resp.choices[0].message.content
+        for m in TRY_MODELS_V1:
+            try:
+                resp = client.chat.completions.create(
+                    model=m,
+                    messages=messages,
+                    temperature=temperature,
+                )
+                return resp.choices[0].message.content, m
+            except Exception as e:
+                errors.append(f"{m}: {e}")
+        raise RuntimeError("All v1 models failed -> " + " | ".join(errors))
     else:
-        # legacy style
-        resp = client.ChatCompletion.create(
-            model="gpt-4",
-            messages=messages,
-            temperature=temperature,
-        )
-        return resp.choices[0].message["content"]
+        for m in TRY_MODELS_LEGACY:
+            try:
+                resp = client.ChatCompletion.create(
+                    model=m,
+                    messages=messages,
+                    temperature=temperature,
+                )
+                return resp.choices[0].message["content"], m
+            except Exception as e:
+                errors.append(f"{m}: {e}")
+        raise RuntimeError("All legacy models failed -> " + " | ".join(errors))
 
 def build_summary_prompt(payload: dict) -> str:
     return (
@@ -113,7 +129,7 @@ def build_followup_prompt(prev_summary: str, question: str) -> str:
         f"Follow-up question:\n{question}"
     )
 
-# -------- Webhook (keep your Payhip sync) --------
+# ---------- Webhook ----------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -130,14 +146,8 @@ def webhook():
     if not email:
         return jsonify({"ok": False, "error": "missing email"}), 400
 
-    activate = {
-        "subscription.created", "subscription.updated", "subscription.paid",
-        "subscription.renewed", "subscription.active"
-    }
-    deactivate = {
-        "subscription.cancelled", "subscription.deleted", "subscription.refunded",
-        "subscription.expired", "subscription.inactive"
-    }
+    activate = {"subscription.created","subscription.updated","subscription.paid","subscription.renewed","subscription.active"}
+    deactivate = {"subscription.cancelled","subscription.deleted","subscription.refunded","subscription.expired","subscription.inactive"}
 
     subs = load_subs()
     if event in activate:
@@ -156,7 +166,7 @@ def webhook():
 
     return jsonify({"ok": True, "email": email, "status": subs[email]["status"]}), 200
 
-# -------- Pages --------
+# ---------- Pages ----------
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
@@ -183,32 +193,41 @@ def submit():
         }
         session["intake"] = payload
 
-        if not OPENAI_API_KEY or not client:
-            summary_text = ("⚠️ The server is missing the OpenAI API key or SDK. "
-                            "Please add OPENAI_API_KEY in your Render Environment and redeploy.")
+        if not OPENAI_API_KEY or client is None:
+            summary_text = ("⚠️ OpenAI is not configured on the server. "
+                            "Ask your admin to set OPENAI_API_KEY and redeploy.")
+            reason = "Missing API key or SDK"
+            model_used = "n/a"
         else:
             try:
-                summary_text = chat_complete(
+                summary_text, model_used = chat_complete(
                     messages=[
                         {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
                         {"role": "user", "content": build_summary_prompt(payload)},
                     ],
                     temperature=0.6,
-                ).strip()
-            except Exception:
-                log.exception("OpenAI error during summary")
-                summary_text = "⚠️ Error generating summary. Please try again in a moment."
+                )
+                reason = ""
+            except Exception as e:
+                log.exception("OpenAI summary error")
+                summary_text = "⚠️ Error generating summary. Please try again shortly."
+                reason = str(e)
+                model_used = "n/a"
 
+        # Save & render
         session["summary"] = summary_text or "⚠️ No summary returned."
         session.setdefault("used_followup", False)
 
+        # Show a tiny diagnostics line (safe, masked) to help you fix quickly
+        diag = f"(SDK={sdk_version} | model={model_used} | reason={reason[:160]})" if reason else f"(SDK={sdk_version} | model={model_used})"
+
         return render_template(
             "summary.html",
-            summary=session["summary"],
+            summary=session["summary"] + ("\n\n" + diag if diag else ""),
             is_subscribed=session["is_subscribed"],
             followup_response="",
         )
-    except Exception:
+    except Exception as e:
         log.exception("Unhandled error in /submit")
         return render_template(
             "summary.html",
@@ -236,29 +255,36 @@ def summary():
                     followup_response="This is your one free use. Please subscribe by clicking the link below for continued unlimited access."
                 )
 
-            if not OPENAI_API_KEY or not client:
-                answer = "⚠️ The server is missing the OpenAI API key or SDK."
+            if not OPENAI_API_KEY or client is None:
+                answer = "⚠️ OpenAI is not configured on the server."
+                reason = "Missing API key or SDK"
+                model_used = "n/a"
             else:
                 try:
-                    answer = chat_complete(
+                    answer, model_used = chat_complete(
                         messages=[
                             {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
                             {"role": "user", "content": build_followup_prompt(prev_summary, question)},
                         ],
                         temperature=0.6,
-                    ).strip()
-                except Exception:
-                    log.exception("OpenAI error during follow-up")
+                    )
+                    reason = ""
+                except Exception as e:
+                    log.exception("OpenAI follow-up error")
                     answer = "⚠️ Error generating follow-up. Please try again."
+                    reason = str(e)
+                    model_used = "n/a"
 
             if not subscribed:
                 session["used_followup"] = True
+
+            diag = f"(SDK={sdk_version} | model={model_used} | reason={reason[:160]})" if reason else f"(SDK={sdk_version} | model={model_used})"
 
             return render_template(
                 "summary.html",
                 summary=prev_summary,
                 is_subscribed=subscribed,
-                followup_response=answer
+                followup_response=answer + ("\n\n" + diag if diag else "")
             )
 
         return render_template(
@@ -278,7 +304,7 @@ def summary():
 
 @app.route("/health")
 def health():
-    return jsonify({"ok": True, "time": datetime.utcnow().isoformat()})
+    return jsonify({"ok": True, "time": datetime.utcnow().isoformat(), "sdk": sdk_version})
 
 @app.route("/reset")
 def reset():
