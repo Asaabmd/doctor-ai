@@ -2,39 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Doctor AI Summary</title>
+  <title>Your Summary - Doctor AI</title>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
-    .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2, h3 { text-align: center; color: #2c3e50; }
-    pre { background: #eef; padding: 15px; white-space: pre-wrap; border-radius: 8px; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2, h3 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    pre {
+      background: #eef;
+      padding: 15px;
+      white-space: pre-wrap;
+      border-radius: 8px;
+    }
     form textarea, form button {
-        width: 100%;
-        margin-top: 15px;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
+      width: 100%;
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
     .btn {
-        background-color: #3498db;
-        color: white;
-        border: none;
-        cursor: pointer;
-        margin-top: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
     }
     .btn:hover {
-        background-color: #2980b9;
+      background-color: #2980b9;
     }
     .back {
-        text-align: center;
-        margin-top: 20px;
+      text-align: center;
+      margin-top: 20px;
     }
     .message {
-        background-color: #e0f7fa;
-        border-left: 6px solid #00acc1;
-        padding: 12px;
-        margin-top: 20px;
-        border-radius: 6px;
+      background-color: #e0f7fa;
+      border-left: 6px solid #00acc1;
+      padding: 12px;
+      margin-top: 20px;
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -60,7 +81,7 @@
     {% else %}
       <form method="post" action="/followup">
         <label for="followup"><strong>Ask a follow-up question based on your summary:</strong></label>
-        <textarea name="followup" rows="3" placeholder="E.g., What should I do next if my symptoms worsen?"></textarea>
+        <textarea name="followup" rows="3" placeholder="What should I do next if my symptoms worsen?"></textarea>
         <button class="btn" type="submit">Submit Follow-Up Question</button>
       </form>
     {% endif %}
