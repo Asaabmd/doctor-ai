@@ -1,4 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctor AI | Smart Health</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"/>
+  <style>
+    body { background: #f5faff; padding: 1rem; }
+    .logo { width: 120px; float: right; margin-top: -1rem; }
+    .doctor-img { width: 120px; float: left; margin-top: -1rem; border-radius: 50%; }
+    .mic-button { cursor: pointer; font-size: 1.5rem; margin-left: 0.5rem; }
+    .highlight { background-color: #e0f2ff; padding: 0.75rem; border-radius: 5px; }
+    .field-label { font-weight: bold; }
+  </style>
+  <script>
+    function startDictation(id) {
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.onresult = function(event) {
+        document.getElementById(id).value = event.results[0][0].transcript;
+        setTimeout(() => {
+          const formElements = [...document.querySelector("form").elements];
+          const index = formElements.findIndex(el => el.id === id);
+          if (formElements[index + 1]) formElements[index + 1].focus();
+        }, 200);
+      };
+      recognition.start();
+    }
 
-<!-- your previously generated full index.html top half code here -->
+    function focusNextOnEnter(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const formElements = [...document.querySelector("form").elements];
+        const index = formElements.findIndex(el => el === event.target);
+        if (formElements[index + 1]) formElements[index + 1].focus();
+      }
+    }
+  </script>
+</head>
+<body>
+  <img src="/static/logo.png" alt="Logo" class="logo"/>
+  <img src="/static/doctor.jpeg" alt="Doctor" class="doctor-img"/>
 
-<!-- the bottom half fields HTML you previously confirmed -->
+  <h2>Doctor AI</h2>
+  <p class="highlight">This tool provides an educational summary based on your symptoms. It is NOT a substitute for professional medical care.</p>
+
+  <form action="/summary" method="post">
+    <label class="field-label">Email:
+      <input type="email" name="email" id="email" required onkeydown="focusNextOnEnter(event)"/>
+    </label>
+
+    <label class="field-label">Sex:
+      <select name="sex" id="sex" required onkeydown="focusNextOnEnter(event)">
+        <option value="">Select</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+    </label>
+
+    <label class="field-label">Age Group:
+      <select name="age_group" id="age_group" required onkeydown="focusNextOnEnter(event)">
+        <option value="">Select</option>
+        <option>Child</option>
+        <option>Teen</option>
+        <option>Adult</option>
+        <option>Senior</option>
+      </select>
+    </label>
+
+    <label class="field-label">Describe your symptoms:
+      <input type="text" name="symptoms" id="symptoms" required onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('symptoms')">🎤</span>
+    </label>
+
+    <label class="field-label">Existing conditions:
+      <input type="text" name="conditions" id="conditions" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('conditions')">🎤</span>
+    </label>
+
+    <label class="field-label">Allergies:
+      <input type="text" name="allergies" id="allergies" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('allergies')">🎤</span>
+    </label>
+
+    <label class="field-label">Current medications:
+      <input type="text" name="medications" id="medications" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('medications')">🎤</span>
+    </label>
+
+    <label class="field-label">When did it start:
+      <input type="text" name="onset" id="onset" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('onset')">🎤</span>
+    </label>
+
+    <label class="field-label">What makes it better:
+      <input type="text" name="better" id="better" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('better')">🎤</span>
+    </label>
+
+    <label class="field-label">What makes it worse:
+      <input type="text" name="worse" id="worse" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('worse')">🎤</span>
+    </label>
+
+    <label class="field-label">Severity (1–10):
+      <input type="number" name="severity" id="severity" min="1" max="10" onkeydown="focusNextOnEnter(event)"/>
+    </label>
+
+    <label class="field-label">What have you tried:
+      <input type="text" name="tried" id="tried" onkeydown="focusNextOnEnter(event)"/>
+      <span class="mic-button" onclick="startDictation('tried')">🎤</span>
+    </label>
+
+    <p class="highlight">Please complete all fields above and wait a few moments after clicking Submit.</p>
+
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>

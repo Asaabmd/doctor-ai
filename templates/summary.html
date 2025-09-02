@@ -1,2 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor AI Summary</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body { background: #f5faff; padding: 2rem; }
+    .summary-box { background: #e6f2ff; padding: 1.5rem; border-radius: 10px; }
+    .logo { width: 120px; float: right; }
+    .doctor-img { width: 120px; float: left; border-radius: 50%; }
+    .cta { margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <img src="/static/logo.png" alt="Logo" class="logo"/>
+  <img src="/static/doctor.jpeg" alt="Doctor" class="doctor-img"/>
+  <h2>Your Educational Summary</h2>
 
-<!-- your previously generated summary.html code here -->
+  <div class="summary-box">
+    <p>{{ summary }}</p>
+  </div>
+
+  {% if not subscribed %}
+  <div class="cta">
+    <p><strong>Want unlimited access?</strong> Subscribe below:</p>
+    <a class="contrast" href="https://payhip.com/b/Da82I" target="_blank">Subscribe for $9/month</a>
+  </div>
+  {% endif %}
+
+  <p><a href="/">← Back to Doctor AI</a></p>
+</body>
+</html>
