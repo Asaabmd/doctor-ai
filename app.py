@@ -1,43 +1,58 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-import openai
-import os
-import json
-import logging
+import os, json, logging
 from datetime import datetime
 
-# ---------- Logging ----------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
-)
+# -------- Logging --------
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("doctor-ai")
 
-# ---------- Flask / OpenAI ----------
+# -------- Flask --------
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
-else:
-    log.warning("OPENAI_API_KEY is not set. Summaries will show a friendly error message instead of 500.")
+OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
+if not OPENAI_API_KEY:
+    log.warning("OPENAI_API_KEY not set. Summaries will show a friendly message.")
+
+# Try to support BOTH OpenAI SDK versions:
+# v1: from openai import OpenAI  -> client.chat.completions.create(...)
+# legacy: import openai -> openai.ChatCompletion.create(...)
+client = None
+use_v1_client = False
+try:
+    # Try v1 client
+    from openai import OpenAI
+    client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else OpenAI()
+    use_v1_client = True
+    log.info("Using OpenAI v1 client.")
+except Exception:
+    # Fallback: legacy
+    try:
+        import openai  # type: ignore
+        if OPENAI_API_KEY:
+            openai.api_key = OPENAI_API_KEY
+        client = openai
+        use_v1_client = False
+        log.info("Using legacy OpenAI client.")
+    except Exception as e:
+        client = None
+        log.exception("Failed to import any OpenAI client")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 
-# ---------- Subscription helpers ----------
+# -------- Subscription helpers --------
 def load_subs() -> dict:
     try:
         with open(SUBSCRIPTIONS_FILE, "r") as f:
             return json.load(f)
-    except Exception as e:
-        # fine if file doesn't exist yet
+    except Exception:
         return {}
 
 def save_subs(d: dict) -> None:
     try:
         with open(SUBSCRIPTIONS_FILE, "w") as f:
             json.dump(d, f)
-    except Exception as e:
+    except Exception:
         log.exception("Failed to write subscriptions.json")
 
 def is_subscribed_via_file(email: str) -> bool:
@@ -56,7 +71,49 @@ def is_subscribed(email: str, req=None) -> bool:
         pass
     return bool(file_access or cookie_access)
 
-# ---------- Webhook to update subscriptions ----------
+# -------- OpenAI helpers (dual mode) --------
+def chat_complete(messages, temperature=0.6):
+    """Call OpenAI chat completions across SDK versions."""
+    if not OPENAI_API_KEY or not client:
+        raise RuntimeError("OpenAI API key or client not configured")
+
+    if use_v1_client:
+        # v1 style
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",  # fast/cheap; change to gpt-4o if you prefer
+            messages=messages,
+            temperature=temperature,
+        )
+        return resp.choices[0].message.content
+    else:
+        # legacy style
+        resp = client.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=temperature,
+        )
+        return resp.choices[0].message["content"]
+
+def build_summary_prompt(payload: dict) -> str:
+    return (
+        "You are a helpful AI healthcare assistant. Using the patient intake below, "
+        "write a friendly, easy-to-understand, and strictly educational summary. "
+        "Include: possible causes, home measures, over-the-counter options when appropriate, "
+        "clear red flags, and when to seek urgent care. End with a strong disclaimer that "
+        "this is not medical advice.\n\n"
+        "Patient Intake:\n" + "\n".join([f"- {k}: {v}" for k, v in payload.items()])
+    )
+
+def build_followup_prompt(prev_summary: str, question: str) -> str:
+    return (
+        "The following is an educational summary previously given to a user. "
+        "Answer the user's follow-up question clearly and compassionately. "
+        "Remind them this is educational only.\n\n"
+        f"Summary:\n{prev_summary}\n\n"
+        f"Follow-up question:\n{question}"
+    )
+
+# -------- Webhook (keep your Payhip sync) --------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -88,11 +145,9 @@ def webhook():
     elif event in deactivate:
         subs[email] = {"status": "inactive"}
     else:
-        # ignore unknown events but 200 OK so provider doesn't retry
         return jsonify({"ok": True, "ignored_event": event or "(none)"}), 200
 
     save_subs(subs)
-    # live-refresh current session if the same user
     try:
         if session.get("email", "").strip().lower() == email:
             session["is_subscribed"] = (subs[email]["status"] == "active")
@@ -101,7 +156,7 @@ def webhook():
 
     return jsonify({"ok": True, "email": email, "status": subs[email]["status"]}), 200
 
-# ---------- Pages ----------
+# -------- Pages --------
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
@@ -128,31 +183,19 @@ def submit():
         }
         session["intake"] = payload
 
-        prompt = (
-            "You are a helpful AI healthcare assistant. Using the patient intake below, "
-            "write a friendly, easy-to-understand, and strictly educational summary. "
-            "Include: possible causes, home measures, over-the-counter options when appropriate, "
-            "clear red flags, and when to seek urgent care. End with a strong disclaimer that "
-            "this is not medical advice.\n\n"
-            f"Patient Intake:\n" + "\n".join([f"- {k}: {v}" for k, v in payload.items()])
-        )
-
-        summary_text = None
-        if not OPENAI_API_KEY:
-            summary_text = ("⚠️ OpenAI API key is not configured on the server. "
-                            "The app cannot generate a summary right now.")
+        if not OPENAI_API_KEY or not client:
+            summary_text = ("⚠️ The server is missing the OpenAI API key or SDK. "
+                            "Please add OPENAI_API_KEY in your Render Environment and redeploy.")
         else:
             try:
-                resp = openai.ChatCompletion.create(
-                    model="gpt-4",
+                summary_text = chat_complete(
                     messages=[
                         {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
-                        {"role": "user", "content": prompt},
+                        {"role": "user", "content": build_summary_prompt(payload)},
                     ],
                     temperature=0.6,
-                )
-                summary_text = resp.choices[0].message.content.strip()
-            except Exception as e:
+                ).strip()
+            except Exception:
                 log.exception("OpenAI error during summary")
                 summary_text = "⚠️ Error generating summary. Please try again in a moment."
 
@@ -165,9 +208,8 @@ def submit():
             is_subscribed=session["is_subscribed"],
             followup_response="",
         )
-    except Exception as e:
+    except Exception:
         log.exception("Unhandled error in /submit")
-        # Show a graceful page instead of 500
         return render_template(
             "summary.html",
             summary="⚠️ Something went wrong while processing your request.",
@@ -182,7 +224,6 @@ def summary():
             question = (request.form.get("followup") or "").strip()
             prev_summary = session.get("summary", "")
 
-            # Re-check subscription in case webhook/cookie changed
             email = (session.get("email") or "").strip().lower()
             session["is_subscribed"] = is_subscribed(email, request)
             subscribed = session["is_subscribed"]
@@ -195,28 +236,18 @@ def summary():
                     followup_response="This is your one free use. Please subscribe by clicking the link below for continued unlimited access."
                 )
 
-            answer = None
-            if not OPENAI_API_KEY:
-                answer = "⚠️ OpenAI API key is not configured on the server."
+            if not OPENAI_API_KEY or not client:
+                answer = "⚠️ The server is missing the OpenAI API key or SDK."
             else:
                 try:
-                    followup_prompt = (
-                        "The following is an educational summary previously given to a user. "
-                        "Answer the user's follow-up question clearly and compassionately. "
-                        "Remind them this is educational only.\n\n"
-                        f"Summary:\n{prev_summary}\n\n"
-                        f"Follow-up question:\n{question}"
-                    )
-                    resp = openai.ChatCompletion.create(
-                        model="gpt-4",
+                    answer = chat_complete(
                         messages=[
                             {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
-                            {"role": "user", "content": followup_prompt},
+                            {"role": "user", "content": build_followup_prompt(prev_summary, question)},
                         ],
                         temperature=0.6,
-                    )
-                    answer = resp.choices[0].message.content.strip()
-                except Exception as e:
+                    ).strip()
+                except Exception:
                     log.exception("OpenAI error during follow-up")
                     answer = "⚠️ Error generating follow-up. Please try again."
 
@@ -230,7 +261,6 @@ def summary():
                 followup_response=answer
             )
 
-        # GET render
         return render_template(
             "summary.html",
             summary=session.get("summary", ""),
@@ -246,7 +276,6 @@ def summary():
             followup_response=""
         ), 200
 
-# Simple health endpoint
 @app.route("/health")
 def health():
     return jsonify({"ok": True, "time": datetime.utcnow().isoformat()})
