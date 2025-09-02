@@ -1,94 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Doctor AI Summary</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctor AI - Summary</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" />
   <style>
     body {
-      background-color: white;
-      font-family: Arial, sans-serif;
-      margin: 20px;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
     }
     .logo {
-      float: right;
-      width: 100px;
+      height: 60px;
     }
     .doctor {
-      float: left;
-      width: 100px;
+      height: 60px;
+      border-radius: 50%;
     }
-    .highlight {
-      background-color: #e0f0ff;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 6px;
+    h1 {
+      color: #0056b3;
+    }
+    .box {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 1.5rem;
+    }
+    .box h2 {
+      color: #004085;
     }
     textarea {
       width: 100%;
-      height: 100px;
-      padding: 10px;
-      margin-top: 10px;
+      min-height: 100px;
+      padding: 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
-    .mic-button {
-      font-size: 1.2em;
+    .mic-btn {
+      cursor: pointer;
       background: none;
       border: none;
+      font-size: 1.5rem;
+      margin-left: 0.5rem;
+      color: #007bff;
+    }
+    .actions {
+      margin-top: 1rem;
+    }
+    .actions button, .actions a {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      text-decoration: none;
+      margin-right: 1rem;
       cursor: pointer;
     }
-  </style>
-  <script>
-    function startDictation(id) {
-      if (window.hasOwnProperty('webkitSpeechRecognition')) {
-        var recognition = new webkitSpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-        recognition.start();
-        recognition.onresult = function(e) {
-          document.getElementById(id).value = e.results[0][0].transcript;
-          recognition.stop();
-        };
-        recognition.onerror = function(e) {
-          recognition.stop();
-        };
-      }
+    .note, .disclaimer {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 1rem;
     }
-  </script>
+    .disclaimer {
+      font-style: italic;
+    }
+  </style>
 </head>
 <body>
-  <img src="{{ url_for('static', filename='doctor.jpeg') }}" class="doctor" alt="Doctor">
-  <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
-  <h2>Educational Summary</h2>
+  <header>
+    <img src="/static/logo.png" alt="Logo" class="logo">
+    <img src="/static/doctor.jpeg" alt="Doctor" class="doctor">
+  </header>
 
-  <div class="highlight">
-    {{ summary }}
+  <h1>Your Educational Health Summary</h1>
+
+  <div class="box">
+    <h2>Summary</h2>
+    <p>{{ summary }}</p>
   </div>
 
-  {% if followup_answer %}
-  <h3>Follow-Up Answer:</h3>
-  <div class="highlight">{{ followup_answer }}</div>
-  {% endif %}
-
-  {% if subscribed %}
-    <p><strong>Thank you for being a subscriber. You can ask unlimited follow-up questions and/or click the link at the end to start a new session.</strong></p>
-  {% elif used %}
-    <p><strong>This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</strong></p>
-  {% endif %}
-
-  <form method="POST" action="/followup">
-    <label for="followup">Ask a follow-up question:</label>
-    <textarea name="followup" id="followup" placeholder="Ask a clarifying question about your symptoms or summary..."></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('followup')">🎤</button>
-    <br><br>
-    <button type="submit">Submit Follow-Up</button>
-  </form>
-
-  <br><br>
-  <a href="/">🔄 Start a New Session</a> |
-  <a href="https://payhip.com/b/Zvk2v" target="_blank">💳 Subscribe for Unlimited Access</a>
-
-  <div class="highlight">
-    <strong>Disclaimer:</strong> This summary is for educational purposes only and is not a substitute for professional medical advice.
+  {% if followup %}
+  <div class="box">
+    <h2>Follow-Up Answer</h2>
+    <p>{{ followup }}</p>
   </div>
+  {% endif %}
+
+  <div class="box">
+    <h2>Have a Follow-Up Question?</h2>
+    {% if subscribed %}
+      <form action="/followup" method="post">
+        <textarea name="followup" placeholder="Type your follow-up question here..."></textarea>
+        <button type="button" class="mic-btn" onclick="startDictation('followup')">🎤</button>
+        <div class="actions">
+          <button type="submit">Submit Follow-Up</button>
+        </div>
+        <div class="note">Thank you for being a subscriber. You can ask unlimited follow-up questions and/or click the link at the end to start a new session.</div>
+      </form>
+    {% else %}
+      {% if followup %}
+        <div class="note">This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</div>
+      {% else %}
+        <form action="/followup" method="post">
+          <textarea name="followup" placeholder="Type your follow-up question here..."></textarea>
+          <button type="button" class="mic-btn" onclick="startDictation('followup')">🎤</button>
+          <div class="actions">
+            <button type="submit">Submit Follow-Up</button>
+          </div>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="actions">
+    <a href="/">🔄 Start New Session</a>
+    <a href="https://payhip.com/b/Da82I" target="_blank">💳 Subscribe</a>
+  </div>
+
+  <div class="disclaimer">
+    Disclaimer: This summary is for educational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your physician or qualified healthcare provider with any questions you may have.
+  </div>
+
+  <script>
+    function startDictation(id) {
+      const field = document.getElementsByName(id)[0];
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported.");
+        return;
+      }
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onresult = function(event) {
+        field.value = event.results[0][0].transcript;
+        field.focus();
+      };
+      recognition.start();
+    }
+  </script>
 </body>
 </html>

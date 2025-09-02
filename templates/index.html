@@ -1,18 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Doctor AI</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctor AI - Smart Health Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      width: 100px;
+    }
+    .doctor {
+      width: 100px;
+    }
+    .highlight {
+      background-color: #e0f0ff;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+    }
+    label {
+      font-weight: bold;
+    }
+    textarea, input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background-color: white;
+    }
+    .mic-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2em;
+      margin-left: 5px;
+    }
+  </style>
   <script>
     function startDictation(id) {
       if (window.hasOwnProperty('webkitSpeechRecognition')) {
         var recognition = new webkitSpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'en-US';
+        recognition.lang = "en-US";
         recognition.start();
-
         recognition.onresult = function(e) {
           document.getElementById(id).value = e.results[0][0].transcript;
           recognition.stop();
@@ -23,99 +64,100 @@
       }
     }
 
-    function autoAdvance(id) {
-      const formElements = Array.from(document.querySelectorAll("textarea, input"));
-      const index = formElements.findIndex(el => el.id === id);
-      if (index >= 0 && index < formElements.length - 1) {
-        formElements[index + 1].focus();
-        formElements[index + 1].scrollIntoView({ behavior: "smooth", block: "center" });
+    function autoAdvance(currentFieldId, nextFieldId) {
+      document.getElementById(currentFieldId).addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          document.getElementById(nextFieldId).scrollIntoView({ behavior: "smooth" });
+          document.getElementById(nextFieldId).focus();
+        }
+      });
+    }
+
+    window.onload = function() {
+      const fields = [
+        "email", "age", "sex", "symptoms", "conditions", "allergies", "medications",
+        "onset", "better", "worse", "severity", "treatments"
+      ];
+      for (let i = 0; i < fields.length - 1; i++) {
+        autoAdvance(fields[i], fields[i + 1]);
       }
-    }
+    };
   </script>
-  <style>
-    body {
-      background-color: white;
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .logo {
-      float: right;
-      width: 100px;
-    }
-    .doctor {
-      float: left;
-      width: 100px;
-    }
-    textarea, input[type="text"], input[type="email"] {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-    }
-    .mic-button {
-      background: none;
-      border: none;
-      font-size: 1.2em;
-      cursor: pointer;
-    }
-    .disclaimer, .instructions {
-      background-color: #e0f0ff;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
-  </style>
 </head>
 <body>
-  <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="doctor">
-  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
-  <h1>Doctor AI Symptom Checker</h1>
-
-  <div class="instructions">
-    <strong>Instructions:</strong><br>
-    Please complete all fields in detail to get a customized summary.<br>
-    Press <b>Enter</b> or click the <b>🎤</b> icon to speak. Auto-scroll will help you navigate.<br>
+  <div class="header">
+    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="doctor" />
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo" />
   </div>
 
-  <div class="disclaimer">
-    <strong>Disclaimer:</strong><br>
-    This app provides educational summaries and is not a substitute for professional medical advice.
+  <h2>Doctor AI - Smart Health Assistant</h2>
+  <div class="highlight">
+    <strong>What this app does:</strong> Doctor AI provides an educational summary based on your symptoms, including possible causes, over-the-counter options, home remedies, and red flags. This is for educational purposes only and not a substitute for a physician.
   </div>
 
   <form method="POST" action="/summary">
-    <input type="email" name="email" id="email" required placeholder="Enter your email address" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('email');}">
+    <label>Email (required):</label>
+    <input type="email" name="email" id="email" required placeholder="Enter your email" />
 
-    <input type="text" name="age" id="age" required placeholder="Your age" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('age');}">
-    <input type="text" name="sex" id="sex" required placeholder="Your sex (e.g., male, female)" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('sex');}">
+    <label>Age:</label>
+    <input type="number" name="age" id="age" placeholder="Enter your age in years" />
 
-    <textarea name="symptoms" id="symptoms" required placeholder="Describe your symptoms in detail. The more details you provide, the more specific your summary." onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('symptoms');}"></textarea>
+    <label>Sex:</label>
+    <select name="sex" id="sex">
+      <option value="">Select your sex</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label>Describe your symptoms:</label>
+    <textarea name="symptoms" id="symptoms" placeholder="Describe your symptoms in detail. The more details you provide, the more customized your summary will be."></textarea>
     <button class="mic-button" type="button" onclick="startDictation('symptoms')">🎤</button>
 
-    <textarea name="conditions" id="conditions" placeholder="What are your current medical conditions?" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('conditions');}"></textarea>
+    <label>Existing conditions:</label>
+    <textarea name="conditions" id="conditions" placeholder="What are your current medical conditions?"></textarea>
     <button class="mic-button" type="button" onclick="startDictation('conditions')">🎤</button>
 
-    <textarea name="allergies" id="allergies" placeholder="List any allergies to medications, food, or other items. If none, enter 'None'." onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('allergies');}"></textarea>
+    <label>Allergies:</label>
+    <textarea name="allergies" id="allergies" placeholder="Allergies to medications, food, or other items. If none, enter 'None'."></textarea>
     <button class="mic-button" type="button" onclick="startDictation('allergies')">🎤</button>
 
-    <textarea name="medications" id="medications" placeholder="What medications or supplements are you currently taking?" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('medications');}"></textarea>
+    <label>Current medications:</label>
+    <textarea name="medications" id="medications" placeholder="What medications do you take?"></textarea>
     <button class="mic-button" type="button" onclick="startDictation('medications')">🎤</button>
 
-    <textarea name="onset" id="onset" placeholder="When did your symptoms start?" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('onset');}"></textarea>
+    <label>When did it start?</label>
+    <textarea name="onset" id="onset" placeholder="When did your current symptoms start?"></textarea>
     <button class="mic-button" type="button" onclick="startDictation('onset')">🎤</button>
 
-    <textarea name="better" id="better" placeholder="What makes your symptoms better? If unsure, enter 'NA'." onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('better');}"></textarea>
+    <label>What makes it better?</label>
+    <textarea name="better" id="better" placeholder="What makes your symptoms better? If not sure, enter 'NA'."></textarea>
     <button class="mic-button" type="button" onclick="startDictation('better')">🎤</button>
 
-    <textarea name="worse" id="worse" placeholder="What makes your symptoms worse? If unsure, enter 'NA'." onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('worse');}"></textarea>
+    <label>What makes it worse?</label>
+    <textarea name="worse" id="worse" placeholder="What makes your symptoms worse? If not sure, enter 'NA'."></textarea>
     <button class="mic-button" type="button" onclick="startDictation('worse')">🎤</button>
 
-    <textarea name="severity" id="severity" placeholder="How severe are your symptoms on a scale of 1 to 10? (10 is the most severe)" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('severity');}"></textarea>
+    <label>Severity (1–10):</label>
+    <textarea name="severity" id="severity" placeholder="How severe are your symptoms? (10 is the most severe)"></textarea>
     <button class="mic-button" type="button" onclick="startDictation('severity')">🎤</button>
 
-    <textarea name="treatments" id="treatments" placeholder="What medications or remedies have you tried so far?" onkeydown="if(event.key==='Enter'){event.preventDefault(); autoAdvance('treatments');}"></textarea>
+    <label>What have you tried?</label>
+    <textarea name="treatments" id="treatments" placeholder="What medications or remedies have you tried for your symptoms?"></textarea>
     <button class="mic-button" type="button" onclick="startDictation('treatments')">🎤</button>
 
-    <br><br>
+    <div class="highlight">
+      ✅ <strong>Please complete all fields thoroughly.</strong><br/>
+      ⏳ After clicking Submit, please wait a few moments for your personalized summary to appear.
+    </div>
+
     <button type="submit">Submit</button>
   </form>
+
+  <br />
+  <div class="highlight">
+    <strong>Disclaimer:</strong> This app is for educational purposes only and is not a substitute for professional medical care.
+  </div>
 </body>
 </html>
