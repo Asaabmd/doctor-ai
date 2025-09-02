@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,29 +35,20 @@
     <img src="/static/doctor.jpeg" alt="Doctor" />
     <img src="/static/logo.png" alt="Logo" />
   </div>
-
   <div class="container">
     <h1>🧠 Doctor AI Summary</h1>
-
     {% if is_subscribed %}
-      <div class="sub-status subscribed">
-        ✅ You are subscribed: Unlimited use
-      </div>
+      <div class="sub-status subscribed">✅ You are subscribed: Unlimited use</div>
     {% else %}
       <div class="sub-status unsubscribed">
-        🔒 You are on the free plan: One summary and one follow-up only.
-        <br />
+        🔒 You are on the free plan: One summary and one follow-up only.<br />
         🚀 <a href="https://payhip.com/b/Da82I">Click here to subscribe for unlimited access</a>
       </div>
     {% endif %}
-
     <div class="section">
       <h3>📋 Your Educational Health Summary</h3>
-      <div class="response-box">
-        {{ response | safe }}
-      </div>
+      <div class="response-box">{{ response | safe }}</div>
     </div>
-
     <div class="section">
       <h3>❓ Have a Follow-Up Question?</h3>
       <form method="POST">
@@ -67,13 +59,8 @@
         </div>
         <button type="submit">Submit Follow-Up</button>
       </form>
-
       {% if followup_response %}
-        <div class="response-box">
-          <strong>🔁 Response:</strong><br>
-          {{ followup_response | safe }}
-        </div>
-
+        <div class="response-box"><strong>🔁 Response:</strong><br>{{ followup_response | safe }}</div>
         <div class="link-box">
           {% if is_subscribed %}
             🔁 <a href="{{ url_for('index') }}">Start a new symptom entry</a>
@@ -84,31 +71,16 @@
       {% endif %}
     </div>
   </div>
-
   <script>
-    window.onload = () => {
-      document.getElementById("followup").focus();
-    }
-
+    window.onload = () => { document.getElementById("followup").focus(); }
     function startDictation() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported.");
-        return;
-      }
-
+      if (!('webkitSpeechRecognition' in window)) { alert("Speech recognition not supported."); return; }
       const recognition = new webkitSpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onresult = function(event) {
+      recognition.lang = "en-US"; recognition.interimResults = false; recognition.maxAlternatives = 1;
+      recognition.onresult = (event) => {
         document.getElementById("followup").value = event.results[0][0].transcript;
       };
-
-      recognition.onerror = function(event) {
-        alert("Speech recognition error: " + event.error);
-      };
-
+      recognition.onerror = (event) => { alert("Speech recognition error: " + event.error); };
       recognition.start();
     }
   </script>
