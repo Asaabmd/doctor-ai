@@ -1,130 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Doctor AI – Educational Symptom Summary</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f7f9fc;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
-    }
-    h1, h2 {
-      text-align: center;
-      color: #2c3e50;
-    }
-    label {
-      font-weight: bold;
-    }
-    input, textarea, select {
-      width: 100%;
-      margin-top: 6px;
-      margin-bottom: 15px;
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      background-color: #fff;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    .disclaimer, .reminder {
-      background: #e3f2fd;
-      padding: 15px;
-      margin-top: 20px;
-      border-left: 6px solid #2196F3;
-      border-radius: 6px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Doctor AI - Symptom Checker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="container">
-    <img src="/static/logo.png" style="float:right; height:60px;" alt="Logo">
-    <img src="/static/doctor.jpeg" style="float:left; height:60px;" alt="Doctor">
-    <div style="clear:both;"></div>
-    <h1>Doctor AI</h1>
-    <h2>Get an Educational Summary of Your Symptoms</h2>
+    <header>
+        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="header-img-left">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="header-img-right">
+        <h1>Doctor AI</h1>
+        <p class="description">
+            Describe your symptoms in detail below. Doctor AI will provide an educational summary 
+            and identify possible conditions, home remedies, and red flags. This is not a substitute 
+            for seeing a licensed physician. One free use, then $9/month for unlimited access.
+        </p>
+    </header>
+    <main>
+        <form action="/summary" method="post">
+            <label>Email:<input type="email" name="email" required placeholder="Your email address"></label>
+            <label>Age:<input type="number" name="age" required placeholder="Your age in years"></label>
+            <label>Sex:
+                <select name="sex" required>
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+            </label>
+            <label>Describe your symptoms:<textarea name="symptoms" required placeholder="Describe your symptoms in detail. The more details you provide, the more customized your summary will be."></textarea></label>
+            <label>Existing medical conditions:<textarea name="conditions" placeholder="What are your current medical conditions?"></textarea></label>
+            <label>Allergies:<textarea name="allergies" placeholder="Allergies to medications, food, or other items. If none, enter 'None'."></textarea></label>
+            <label>Current medications:<textarea name="medications" placeholder="What medications do you take?"></textarea></label>
+            <label>When did your symptoms start?:<textarea name="onset" placeholder="When did your current symptoms start?"></textarea></label>
+            <label>What makes it better?:<textarea name="better" placeholder="What makes your symptoms better? If not sure, enter 'NA'."></textarea></label>
+            <label>What makes it worse?:<textarea name="worse" placeholder="What makes your symptoms worse? If not sure, enter 'NA'."></textarea></label>
+            <label>Severity (1–10):<input type="number" name="severity" min="1" max="10" placeholder="How severe are your symptoms? (10 is the most severe)"></label>
+            <label>What have you tried?:<textarea name="tried" placeholder="What medications or remedies have you tried for your symptoms?"></textarea></label>
 
-    <p>This app provides a helpful AI-generated summary of your symptoms based on your input. It is educational only and <strong>not a substitute for professional medical advice, diagnosis, or treatment.</strong></p>
-
-    <form method="post" action="/submit">
-      <label>Email Address:</label>
-      <input type="email" name="email" required placeholder="Enter your email address to track usage or subscription">
-
-      <label>Sex:</label>
-      <select name="sex" required>
-        <option value="">Select</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-      </select>
-
-      <label>Age Group:</label>
-      <select name="age" required>
-        <option value="">Select</option>
-        <option value="Under 18">Under 18</option>
-        <option value="18–30">18–30</option>
-        <option value="31–50">31–50</option>
-        <option value="51–70">51–70</option>
-        <option value="Over 70">Over 70</option>
-      </select>
-
-      <label>Describe Your Symptoms:</label>
-      <textarea name="symptoms" required placeholder="Describe your symptoms in detail. The more information you provide, the more specific your summary will be."></textarea>
-
-      <label>Existing Conditions:</label>
-      <textarea name="conditions" required placeholder="What medical conditions do you have? E.g., diabetes, high blood pressure, etc."></textarea>
-
-      <label>Allergies:</label>
-      <textarea name="allergies" required placeholder="Allergies to medications, foods, or other items. If none, write 'None'."></textarea>
-
-      <label>Current Medications:</label>
-      <textarea name="medications" required placeholder="List the medications you are currently taking."></textarea>
-
-      <label>When Did Your Symptoms Start?</label>
-      <textarea name="onset" required placeholder="Indicate when your current symptoms began. Be specific if possible."></textarea>
-
-      <label>What Makes It Better?</label>
-      <textarea name="better" required placeholder="What relieves or improves your symptoms? If unsure, write 'Not sure'."></textarea>
-
-      <label>What Makes It Worse?</label>
-      <textarea name="worse" required placeholder="What worsens your symptoms? If unsure, write 'Not sure'."></textarea>
-
-      <label>Severity (1–10):</label>
-      <input type="number" name="severity" min="1" max="10" required placeholder="How severe are your symptoms? (1 = mild, 10 = most severe)">
-
-      <label>What Have You Tried So Far?</label>
-      <textarea name="tried" required placeholder="Mention any treatments, home remedies, or medications you’ve tried."></textarea>
-
-      <button type="submit">Generate Summary</button>
-    </form>
-
-    <div class="reminder">
-      <strong>Reminder:</strong> Please complete all fields with as much detail as possible. This helps the AI create a more useful summary for you.
-    </div>
-
-    <div class="disclaimer">
-      <strong>Disclaimer:</strong> This is an educational tool only and does not provide medical advice, diagnosis, or treatment.
-    </div>
-  </div>
+            <p class="reminder"><strong>Please complete all fields for best results.</strong></p>
+            <p class="disclaimer">This tool is for educational purposes only and does not constitute medical advice.</p>
+            <button type="submit">Submit</button>
+        </form>
+    </main>
 </body>
 </html>

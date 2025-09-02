@@ -1,94 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Your Summary - Doctor AI</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2, h3 {
-      text-align: center;
-      color: #2c3e50;
-    }
-    pre {
-      background: #eef;
-      padding: 15px;
-      white-space: pre-wrap;
-      border-radius: 8px;
-    }
-    form textarea, form button {
-      width: 100%;
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    .btn {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    .btn:hover {
-      background-color: #2980b9;
-    }
-    .back {
-      text-align: center;
-      margin-top: 20px;
-    }
-    .message {
-      background-color: #e0f7fa;
-      border-left: 6px solid #00acc1;
-      padding: 12px;
-      margin-top: 20px;
-      border-radius: 6px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Doctor AI Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="container">
-    <img src="/static/logo.png" alt="Logo" style="float:right; height:60px;">
-    <img src="/static/doctor.jpeg" alt="Doctor" style="float:left; height:60px;">
-    <div style="clear:both;"></div>
-    <h2>Your AI Summary</h2>
-    <pre>{{ summary }}</pre>
+    <header>
+        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="header-img-left">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="header-img-right">
+        <h1>Doctor AI Summary</h1>
+    </header>
+    <main>
+        <p class="disclaimer">This educational summary is generated based on your input and is not a substitute for medical care from a licensed physician.</p>
 
-    {% if followup %}
-      <h3>Follow-Up Answer:</h3>
-      <pre>{{ followup }}</pre>
-      {% if subscribed %}
-        <div class="message">Thank you for being a subscriber. You can ask unlimited follow-up questions and/or click the link at the end to start a new session.</div>
-      {% else %}
-        <div class="message">This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</div>
-        <div class="back">
-          <a href="https://payhip.com/b/Da82I" target="_blank"><button class="btn">Subscribe for Unlimited Access</button></a>
+        <div class="summary-box">
+            <h2>🧠 Your Educational Summary:</h2>
+            <p>{{ summary }}</p>
         </div>
-      {% endif %}
-    {% else %}
-      <form method="post" action="/followup">
-        <label for="followup"><strong>Ask a follow-up question based on your summary:</strong></label>
-        <textarea name="followup" rows="3" placeholder="What should I do next if my symptoms worsen?"></textarea>
-        <button class="btn" type="submit">Submit Follow-Up Question</button>
-      </form>
-    {% endif %}
 
-    <div class="back">
-      <a href="/"><button class="btn">Back to Form</button></a>
-    </div>
-  </div>
+        {% if followup %}
+        <div class="followup-box">
+            <h2>🔁 Follow-Up Answer:</h2>
+            <p>{{ followup }}</p>
+        </div>
+        {% endif %}
+
+        <form action="/followup" method="POST">
+            <label for="followup">Ask a follow-up question:</label>
+            <textarea id="followup" name="followup" required placeholder="Ask a question related to the summary above."></textarea>
+            <button type="submit">Submit Follow-Up</button>
+        </form>
+
+        {% if subscribed %}
+        <p class="note"><strong>Thank you for being a subscriber.</strong> You can ask unlimited follow-up questions and/or click the link below to start a new session.</p>
+        {% else %}
+        <p class="note"><strong>This is your one free use.</strong> Please subscribe by clicking the link below for continued unlimited access.</p>
+        <a href="https://payhip.com/b/Zvk2v" class="subscribe-button">Subscribe for Unlimited Access</a>
+        {% endif %}
+
+        <a href="/" class="new-session-button">Start New Session</a>
+    </main>
 </body>
 </html>

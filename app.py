@@ -1,14 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, session, url_for
 import openai
 import os
 import json
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
-openai.api_key = os.getenv("OPENAI_API_KEY")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "defaultsecret")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
-USED_EMAILS = set()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def is_subscribed(email):
     try:
@@ -18,67 +17,72 @@ def is_subscribed(email):
     except:
         return False
 
-def ask_chatgpt_summary(data):
-    prompt = f"""You are a helpful and informative AI doctor. Provide an educational and detailed summary of the patient's condition based on the following:
-
-Sex: {data['sex']}
-Age Group: {data['age']}
-Symptoms: {data['symptoms']}
-Existing Conditions: {data['conditions']}
-Allergies: {data['allergies']}
-Current Medications: {data['medications']}
-Onset: {data['onset']}
-What Makes It Better: {data['better']}
-What Makes It Worse: {data['worse']}
-Severity: {data['severity']}
-What Has Been Tried: {data['tried']}
-
-Clearly explain possible causes, educational insights, and when to seek care. Do NOT provide medical advice or diagnoses."""
-
+def ask_chatgpt(prompt):
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
+        messages=[
+            {"role": "system", "content": "You are a helpful medical AI for educational purposes only."},
+            {"role": "user", "content": prompt}
+        ]
     )
-    return response.choices[0].message["content"]
+    return response['choices'][0]['message']['content']
 
-def ask_followup(summary, question):
-    prompt = f"""You previously gave this educational summary:\n{summary}\n\nThe patient now asks: {question}\n\nRespond clearly and informatively. This is not medical advice."""
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-    )
-    return response.choices[0].message["content"]
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
 
-@app.route("/submit", methods=["POST"])
-def submit():
-    email = request.form["email"].strip().lower()
-    if not is_subscribed(email) and email in USED_EMAILS:
-        return redirect(url_for("limit"))
-
-    data = {k: request.form[k] for k in request.form}
-    summary = ask_chatgpt_summary(data)
-    session["summary"] = summary
+@app.route("/summary", methods=["POST"])
+def summary():
+    form = request.form
+    email = form.get("email", "").strip().lower()
+    subscribed = is_subscribed(email)
     session["email"] = email
-    session["subscribed"] = is_subscribed(email)
-    USED_EMAILS.add(email)
-    return render_template("summary.html", summary=summary, followup=None, subscribed=session["subscribed"])
+    session["subscribed"] = subscribed
+
+    user_input = {
+        "age": form.get("age", ""),
+        "sex": form.get("sex", ""),
+        "symptoms": form.get("symptoms", ""),
+        "conditions": form.get("conditions", ""),
+        "allergies": form.get("allergies", ""),
+        "medications": form.get("medications", ""),
+        "onset": form.get("onset", ""),
+        "better": form.get("better", ""),
+        "worse": form.get("worse", ""),
+        "severity": form.get("severity", ""),
+        "tried": form.get("tried", "")
+    }
+
+    prompt = f"""
+Patient info:
+- Age: {user_input['age']}
+- Sex: {user_input['sex']}
+
+Symptoms: {user_input['symptoms']}
+Medical Conditions: {user_input['conditions']}
+Allergies: {user_input['allergies']}
+Medications: {user_input['medications']}
+Onset: {user_input['onset']}
+What makes it better: {user_input['better']}
+What makes it worse: {user_input['worse']}
+Severity: {user_input['severity']}
+Tried treatments: {user_input['tried']}
+
+Generate a detailed educational summary including possible conditions, red flags, and when to see a doctor.
+"""
+
+    summary_response = ask_chatgpt(prompt)
+    session["summary"] = summary_response
+    return render_template("summary.html", summary=summary_response, subscribed=subscribed)
 
 @app.route("/followup", methods=["POST"])
 def followup():
-    question = request.form["followup"]
+    question = request.form.get("followup", "")
     summary = session.get("summary", "")
-    response = ask_followup(summary, question)
-    return render_template("summary.html", summary=summary, followup=response, subscribed=session.get("subscribed", False))
+    prompt = f"""Previous educational summary:
+{summary}
 
-@app.route("/limit")
-def limit():
-    return "<h3>You have already used your one free session. Please subscribe to continue: <a href='https://payhip.com/b/Da82I'>Subscribe Here</a></h3>"
-
-if __name__ == "__main__":
-    app.run(debug=True)
+Follow-up question:
+{question}"""
+    answer = ask_chatgpt(prompt)
+    return render_template("summary.html", summary=summary, followup=answer, subscribed=session.get("subscribed", False))
