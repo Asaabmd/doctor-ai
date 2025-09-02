@@ -1,7 +1,7 @@
 {
-  "user1@example.com": "active",
-  "vipuser@example.com": "manual",
-  "expireduser@example.com": "inactive",
-   "asaabmd@gmail.com": "active",
-  "halas62@gmail.com": "active"
+  "user1@example.com": { "status": "active" },
+  "vipuser@example.com": { "status": "manual" },
+  "expireduser@example.com": { "status": "inactive" },
+  "asaabmd@gmail.com": { "status": "active" },
+  "halas62@gmail.com": { "status": "active" }
 }
