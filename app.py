@@ -74,7 +74,7 @@ def is_subscribed(email: str, req=None) -> bool:
 
 # ---------- OpenAI helpers ----------
 TRY_MODELS_V1 = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"]
-TRY_MODELS_LEGACY = ["gpt-4", "gpt-3.5-turbo"]  # legacy names
+TRY_MODELS_LEGACY = ["gpt-4", "gpt-3.5-turbo"]
 DEFAULT_TEMPERATURE = 0.6
 TIMEOUT_SECS = 30  # avoid hanging requests
 
@@ -135,7 +135,6 @@ def build_followup_prompt(prev_summary: str, question: str) -> str:
 
 # ---------- Fallback summary (no OpenAI) ----------
 def rule_based_summary(payload: dict) -> str:
-    # A simple deterministic summary so users always get something useful
     parts = []
     sx = payload.get("Symptoms", "").strip()
     sev = payload.get("Severity", "").strip()
@@ -167,7 +166,7 @@ def rule_based_summary(payload: dict) -> str:
     parts.append("\nDisclaimer: This summary is for educational purposes only and is not medical advice. Always consult a licensed clinician for diagnosis or treatment.")
     return "\n".join(parts)
 
-# ---------- Webhook (keep Payhip sync) ----------
+# ---------- Webhook (Payhip sync) ----------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -207,7 +206,6 @@ def webhook():
 # ---------- Diagnostics ----------
 @app.route("/diag")
 def diag():
-    # Tiny self-check; safe to call from a browser
     result = {
         "sdk": sdk_version,
         "key_present": bool(OPENAI_API_KEY),
@@ -239,59 +237,50 @@ def index():
 
 @app.route("/submit", methods=["POST"])
 def submit():
+    # NOTE: Do not hide exceptions here; show them in the UI for fast diagnosis.
+    email = (request.form.get("email") or "").strip().lower()
+    session["email"] = email
+    session["is_subscribed"] = is_subscribed(email, request)
+
+    payload = {
+        "Sex": request.form.get("sex", ""),
+        "Age Group": request.form.get("age_group", ""),
+        "Symptoms": request.form.get("symptoms", ""),
+        "Existing Conditions": request.form.get("conditions", ""),
+        "Allergies": request.form.get("allergies", ""),
+        "Medications": request.form.get("medications", ""),
+        "Onset": request.form.get("onset", ""),
+        "Better With": request.form.get("better", ""),
+        "Worse With": request.form.get("worse", ""),
+        "Severity": request.form.get("severity", ""),
+        "Tried": request.form.get("tried", ""),
+    }
+    session["intake"] = payload
+
+    # Try OpenAI -> fallback -> finally show exact exception text if anything else breaks
+    reason, model_used = "", "n/a"
     try:
-        email = (request.form.get("email") or "").strip().lower()
-        session["email"] = email
-        session["is_subscribed"] = is_subscribed(email, request)
+        text, model_used = chat_complete(
+            messages=[
+                {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
+                {"role": "user", "content": build_summary_prompt(payload)},
+            ],
+            temperature=DEFAULT_TEMPERATURE,
+        )
+        summary_text = text.strip()
+    except Exception as e:
+        log.exception("OpenAI summary error")
+        reason = str(e)
+        summary_text = rule_based_summary(payload)
 
-        payload = {
-            "Sex": request.form.get("sex", ""),
-            "Age Group": request.form.get("age_group", ""),
-            "Symptoms": request.form.get("symptoms", ""),
-            "Existing Conditions": request.form.get("conditions", ""),
-            "Allergies": request.form.get("allergies", ""),
-            "Medications": request.form.get("medications", ""),
-            "Onset": request.form.get("onset", ""),
-            "Better With": request.form.get("better", ""),
-            "Worse With": request.form.get("worse", ""),
-            "Severity": request.form.get("severity", ""),
-            "Tried": request.form.get("tried", ""),
-        }
-        session["intake"] = payload
+    session["summary"] = summary_text or rule_based_summary(payload)
+    session.setdefault("used_followup", False)
 
-        # Try OpenAI -> fallback if needed
-        reason, model_used = "", "n/a"
-        try:
-            text, model_used = chat_complete(
-                messages=[
-                    {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
-                    {"role": "user", "content": build_summary_prompt(payload)},
-                ],
-                temperature=DEFAULT_TEMPERATURE,
-            )
-            summary_text = text.strip()
-        except Exception as e:
-            log.exception("OpenAI summary error")
-            reason = str(e)
-            summary_text = rule_based_summary(payload)
-
-        session["summary"] = summary_text or rule_based_summary(payload)
-        session.setdefault("used_followup", False)
-
-        diag = f"(SDK={sdk_version} | model={model_used}" + (f" | reason={reason[:160]}" if reason else "") + ")"
-        return render_template("summary.html",
-                               summary=session["summary"] + f"\n\n{diag}",
-                               is_subscribed=session["is_subscribed"],
-                               followup_response="")
-    except Exception:
-        log.exception("Unhandled error in /submit")
-        # Absolute fallback
-        return render_template(
-            "summary.html",
-            summary="⚠️ An unexpected error occurred, but the page loaded. Try again.",
-            is_subscribed=False,
-            followup_response=""
-        ), 200
+    diag = f"(SDK={sdk_version} | model={model_used}" + (f" | reason={reason[:160]}" if reason else "") + ")"
+    return render_template("summary.html",
+                           summary=session["summary"] + f"\n\n{diag}",
+                           is_subscribed=session["is_subscribed"],
+                           followup_response="")
 
 @app.route("/summary", methods=["GET", "POST"])
 def summary():
@@ -324,7 +313,6 @@ def summary():
             except Exception as e:
                 log.exception("OpenAI follow-up error")
                 reason = str(e)
-                # fallback: simple deterministic reply
                 answer = ("Thanks for your question. Based on the previous summary, continue supportive care "
                           "unless any red flags develop (worsening pain, breathing issues, chest pain, fainting, new weakness, "
                           "confusion). For persistent/worsening symptoms, contact your clinician.\n\n"
@@ -347,11 +335,11 @@ def summary():
             is_subscribed=session.get("is_subscribed", False),
             followup_response=""
         )
-    except Exception:
+    except Exception as e:
         log.exception("Unhandled error in /summary")
         return render_template(
             "summary.html",
-            summary="⚠️ Something went wrong while loading this page.",
+            summary=f"⚠️ Unhandled error: {str(e)[:200]}",
             is_subscribed=False,
             followup_response=""
         ), 200
