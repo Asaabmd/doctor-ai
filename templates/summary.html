@@ -5,101 +5,173 @@
   <title>Doctor AI – Summary</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --blue:#0b72d9; --blue-dark:#065bb0; --note:#e6f0ff; --bg:#f8fbff; }
-    html, body { margin:0; padding:0; background:var(--bg); font-family:system-ui, Arial, sans-serif; color:#0f172a; }
-    .wrap { max-width:900px; margin:auto; padding:20px; }
-    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    header img.logo { height:60px; }
-    header img.doctor { height:60px; border-radius:12px; }
-    h1 { text-align:center; color:var(--blue-dark); margin:8px 0 16px; }
+    :root {
+      --blue: #0b72d9;
+      --blue-dark: #065bb0;
+      --note: #e6f0ff;
+      --bg: #f8fbff;
+      --text: #0f172a;
+      --muted: #475569;
+      --ok-bg: #ecfdf5;
+      --ok-text: #065f46;
+      --warn-bg: #fff7ed;
+      --warn-text: #9a3412;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 980px; margin: auto; padding: 20px; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    header img.doctor { height: 64px; width: 64px; border-radius: 16px; object-fit: cover; }
+    header img.logo { height: 64px; object-fit: contain; }
+    h1 {
+      text-align: center; color: var(--blue-dark); margin: 8px 0 16px;
+      font-size: clamp(26px, 4vw, 40px);
+    }
+    .status {
+      border-radius: 12px; padding: 12px 14px; margin: 8px 0 18px;
+      font-weight: 600; border-left: 6px solid;
+    }
+    .status.sub { background: var(--ok-bg); color: var(--ok-text); border-left-color: #10b981; }
+    .status.free { background: var(--warn-bg); color: var(--warn-text); border-left-color: #f59e0b; }
 
-    .box {
-      background:#fff; border-radius:12px; padding:16px;
-      box-shadow:0 4px 14px rgba(0,0,0,.06); margin-bottom:16px;
+    .card {
+      background: #fff; border-radius: 16px; padding: 18px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.06); margin-bottom: 16px;
     }
     .msg {
-      background:var(--note); padding:12px; border-left:5px solid var(--blue-dark);
-      border-radius:10px; margin:12px 0;
+      background: var(--note); padding: 12px; border-left: 5px solid var(--blue-dark);
+      border-radius: 10px; margin: 12px 0;
     }
-    textarea {
-      width:100%; min-height:90px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;
-    }
-    .row { margin-bottom:12px; }
-    .micline { display:flex; align-items:center; gap:8px; }
-    .mic-btn {
-      padding: 6px 10px; font-weight:700; cursor:pointer;
-      background:#cce5ff; border:1px solid #93c5fd; border-radius:8px;
-    }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .title-sm { margin: 0 0 8px; color: var(--blue-dark); }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .btn {
-      background:var(--blue); color:#fff; border:none; border-radius:10px;
-      padding:10px 16px; cursor:pointer;
+      background: var(--blue); color: #fff; border: none; border-radius: 10px;
+      padding: 10px 16px; cursor: pointer; text-decoration: none; display: inline-block;
+      font-weight: 600;
     }
     .btn:hover { background: var(--blue-dark); }
-    a.btn { text-decoration:none; display:inline-block; }
+    textarea {
+      width: 100%; min-height: 110px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+      font-size: 16px; background: #fff;
+    }
+    .row { margin-bottom: 12px; }
+    .micline { display: flex; align-items: center; gap: 8px; }
+    .mic-btn {
+      padding: 8px 12px; font-weight: 700; cursor: pointer;
+      background: #cce5ff; border: 1px solid #93c5fd; border-radius: 10px;
+    }
+    .disclaimer { color: var(--muted); }
+    .warning {
+      background: #fff4d6; border-left: 6px solid #f59e0b; padding: 12px 14px; border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 560px) {
+      header { gap: 10px; }
+      header img.doctor, header img.logo { height: 54px; width: auto; }
+    }
   </style>
 
   <script>
-    // Mic for follow-up box
+    // Simple speech-to-text using Web Speech API (Chrome/Edge)
     function startDictation(btn, fieldId) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) { alert("Speech recognition not supported. Please use Chrome or Edge."); return; }
+      if (!SR) { alert("Speech recognition is not supported in this browser. Please use Chrome or Edge."); return; }
       const field = document.getElementById(fieldId);
-      const recog = new SR();
-      recog.lang="en-US"; recog.interimResults=false; recog.maxAlternatives=1;
+      const r = new SR();
+      r.lang = "en-US";
+      r.interimResults = false;
+      r.maxAlternatives = 1;
       btn.disabled = true;
-      recog.onresult = (e)=>{ field.value += (field.value ? " " : "") + e.results[0][0].transcript.trim(); field.focus(); };
-      recog.onerror = ()=> alert("Mic error. Try again.");
-      recog.onend = ()=> { btn.disabled=false; };
-      recog.start();
+      r.onresult = (e) => {
+        const t = e.results[0][0].transcript.trim();
+        field.value += (field.value ? " " : "") + t;
+        field.focus();
+      };
+      r.onerror = () => alert("Microphone error. Please try again.");
+      r.onend = () => { btn.disabled = false; field.scrollIntoView({behavior:"smooth", block:"center"}); };
+      r.start();
     }
+
+    // Autofocus follow-up box and gently scroll it into view
+    window.addEventListener("load", () => {
+      const el = document.getElementById("followup");
+      if (el) {
+        el.focus();
+        setTimeout(() => el.scrollIntoView({behavior: "smooth", block:"center"}), 150);
+      }
+    });
   </script>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <img src="/static/doctor.jpeg" class="doctor" alt="Doctor">
-      <img src="/static/logo.png" class="logo" alt="Logo">
+      <img src="/static/doctor.jpeg" class="doctor" alt="Doctor" />
+      <img src="/static/logo.png" class="logo" alt="Logo" />
     </header>
 
     <h1>Your Educational Health Summary</h1>
 
-    <div class="box">
-      <div style="white-space:pre-wrap">{{ summary }}</div>
+    <!-- Subscription status banner -->
+    {% if is_subscribed %}
+      <div class="status sub">Status: <strong>Subscribed</strong> — unlimited follow-up questions.</div>
+    {% else %}
+      <div class="status free">Status: <strong>Free</strong> — one summary + one follow-up. Subscribe for unlimited access.</div>
+    {% endif %}
+
+    <!-- Main summary text -->
+    <div class="card">
+      <div style="white-space: pre-wrap">{{ summary | safe }}</div>
     </div>
 
+    <!-- If there was a follow-up answer, show it -->
     {% if followup_response %}
-      <div class="box">
-        <h3 style="margin-top:0;color:#065bb0;">Follow-Up Answer</h3>
-        <div style="white-space:pre-wrap">{{ followup_response }}</div>
+      <div class="card">
+        <h3 class="title-sm">Follow-Up Answer</h3>
+        <div style="white-space: pre-wrap">{{ followup_response | safe }}</div>
       </div>
     {% endif %}
 
-    <!-- Subscriber status messages -->
+    <!-- Subscriber / free messages per your copy -->
     {% if is_subscribed %}
       <div class="msg">Thank you for being a subscriber. You can ask unlimited follow up questions and/or click the link at the end to start a new session.</div>
     {% elif followup_response %}
       <div class="msg">This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</div>
     {% endif %}
 
-    <!-- Follow-up form -->
-    <div class="box">
+    <!-- Follow-up form with microphone button -->
+    <div class="card">
       <div class="row"><strong>Have a follow-up question?</strong></div>
       <div class="micline">
-        <textarea id="followup" name="followup" form="fup" placeholder="Ask a question related to your summary (e.g., next steps if pain worsens, which red flags to watch, what to try at home)…"></textarea>
-        <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤</button>
+        <textarea id="followup" name="followup" form="fup" placeholder="Ask a question related to your summary (for example: next steps if pain worsens, which warning signs to watch for, what to try at home). Speak or type your question, then click Submit."></textarea>
+        <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Speak</button>
       </div>
       <form id="fup" method="POST" action="/summary" class="row">
         <div class="actions">
           <button class="btn" type="submit">Submit Follow-Up</button>
           <a class="btn" href="/">Start New Session</a>
-          <a class="btn" href="https://payhip.com/b/Da82I" target="_blank">Subscribe</a>
+          <a class="btn" href="https://payhip.com/b/Da82I" target="_blank" rel="noopener">Subscribe</a>
         </div>
       </form>
     </div>
 
-    <div class="box">
-      <strong>Disclaimer:</strong> This summary is for educational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. If you think you may be experiencing an emergency, call your local emergency number.
+    <!-- Friendly warning + disclaimer -->
+    <div class="warning">
+      If you experience red-flag symptoms such as severe chest pain, trouble breathing, fainting, new weakness or numbness, uncontrolled bleeding, or confusion, seek urgent care immediately or call your local emergency number.
+    </div>
+
+    <div class="card">
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> This summary is for educational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a licensed clinician for care specific to you.
+      </div>
     </div>
   </div>
 </body>

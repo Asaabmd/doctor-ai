@@ -79,6 +79,10 @@ DEFAULT_TEMPERATURE = 0.6
 TIMEOUT_SECS = 30
 
 def chat_complete(messages, temperature=DEFAULT_TEMPERATURE):
+    """
+    Try several models until one succeeds.
+    Returns (text, model_used). Raises RuntimeError on failure.
+    """
     if not OPENAI_API_KEY or not client:
         raise RuntimeError("OpenAI not configured (missing API key or client)")
 
@@ -156,7 +160,7 @@ def rule_based_summary(payload: dict) -> str:
     parts.append("\nDisclaimer: This summary is for educational purposes only and is not medical advice. Always consult a licensed clinician for diagnosis or treatment.")
     return "\n".join(parts)
 
-# ---------- Webhook ----------
+# ---------- Webhook (Payhip sync) ----------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -218,8 +222,12 @@ def diag():
 def index():
     return render_template("index.html")
 
-@app.route("/submit", methods=["POST"])
+@app.route("/submit", methods=["GET", "POST"])
 def submit():
+    if request.method == "GET":
+        # If someone tries to visit /submit directly, redirect to home
+        return redirect(url_for("index"))
+
     try:
         email = (request.form.get("email") or "").strip().lower()
         session["email"] = email
@@ -259,16 +267,17 @@ def submit():
         session.setdefault("used_followup", False)
 
         diag = f"(SDK={sdk_version} | model={model_used}" + (f" | reason={reason[:160]}" if reason else "") + ")"
-        return render_template("summary.html",
-                               summary=session["summary"] + f"\n\n{diag}",
-                               is_subscribed=session["is_subscribed"],
-                               followup_response="")
-    except Exception as e:
-        log.exception("Unhandled error in /submit")
-        # Show exact error to user (no 500)
         return render_template(
             "summary.html",
-            summary=f"⚠️ Unhandled error: {str(e)[:300]}",
+            summary=session["summary"] + f"\n\n{diag}",
+            is_subscribed=session["is_subscribed"],
+            followup_response=""
+        )
+    except Exception as e:
+        log.exception("Unhandled error in /submit")
+        return render_template(
+            "summary.html",
+            summary=f"⚠️ Unhandled error in /submit: {str(e)[:300]}",
             is_subscribed=False,
             followup_response=""
         ), 200
@@ -329,7 +338,7 @@ def summary():
         log.exception("Unhandled error in /summary")
         return render_template(
             "summary.html",
-            summary=f"⚠️ Unhandled error: {str(e)[:300]}",
+            summary=f"⚠️ Unhandled error in /summary: {str(e)[:300]}",
             is_subscribed=False,
             followup_response=""
         ), 200
