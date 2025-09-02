@@ -1,45 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Doctor AI Summary</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8">
+  <title>Doctor AI Summary</title>
+  <style>
+    body {
+      background-color: white;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .logo {
+      float: right;
+      width: 100px;
+    }
+    .doctor {
+      float: left;
+      width: 100px;
+    }
+    .highlight {
+      background-color: #e0f0ff;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .mic-button {
+      font-size: 1.2em;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+  <script>
+    function startDictation(id) {
+      if (window.hasOwnProperty('webkitSpeechRecognition')) {
+        var recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.start();
+        recognition.onresult = function(e) {
+          document.getElementById(id).value = e.results[0][0].transcript;
+          recognition.stop();
+        };
+        recognition.onerror = function(e) {
+          recognition.stop();
+        };
+      }
+    }
+  </script>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="header-img-left">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="header-img-right">
-        <h1>Doctor AI Summary</h1>
-    </header>
-    <main>
-        <p class="disclaimer">This educational summary is generated based on your input and is not a substitute for medical care from a licensed physician.</p>
+  <img src="{{ url_for('static', filename='doctor.jpeg') }}" class="doctor" alt="Doctor">
+  <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
+  <h2>Educational Summary</h2>
 
-        <div class="summary-box">
-            <h2>🧠 Your Educational Summary:</h2>
-            <p>{{ summary }}</p>
-        </div>
+  <div class="highlight">
+    {{ summary }}
+  </div>
 
-        {% if followup %}
-        <div class="followup-box">
-            <h2>🔁 Follow-Up Answer:</h2>
-            <p>{{ followup }}</p>
-        </div>
-        {% endif %}
+  {% if followup_answer %}
+  <h3>Follow-Up Answer:</h3>
+  <div class="highlight">{{ followup_answer }}</div>
+  {% endif %}
 
-        <form action="/followup" method="POST">
-            <label for="followup">Ask a follow-up question:</label>
-            <textarea id="followup" name="followup" required placeholder="Ask a question related to the summary above."></textarea>
-            <button type="submit">Submit Follow-Up</button>
-        </form>
+  {% if subscribed %}
+    <p><strong>Thank you for being a subscriber. You can ask unlimited follow-up questions and/or click the link at the end to start a new session.</strong></p>
+  {% elif used %}
+    <p><strong>This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</strong></p>
+  {% endif %}
 
-        {% if subscribed %}
-        <p class="note"><strong>Thank you for being a subscriber.</strong> You can ask unlimited follow-up questions and/or click the link below to start a new session.</p>
-        {% else %}
-        <p class="note"><strong>This is your one free use.</strong> Please subscribe by clicking the link below for continued unlimited access.</p>
-        <a href="https://payhip.com/b/Zvk2v" class="subscribe-button">Subscribe for Unlimited Access</a>
-        {% endif %}
+  <form method="POST" action="/followup">
+    <label for="followup">Ask a follow-up question:</label>
+    <textarea name="followup" id="followup" placeholder="Ask a clarifying question about your symptoms or summary..."></textarea>
+    <button class="mic-button" type="button" onclick="startDictation('followup')">🎤</button>
+    <br><br>
+    <button type="submit">Submit Follow-Up</button>
+  </form>
 
-        <a href="/" class="new-session-button">Start New Session</a>
-    </main>
+  <br><br>
+  <a href="/">🔄 Start a New Session</a> |
+  <a href="https://payhip.com/b/Zvk2v" target="_blank">💳 Subscribe for Unlimited Access</a>
+
+  <div class="highlight">
+    <strong>Disclaimer:</strong> This summary is for educational purposes only and is not a substitute for professional medical advice.
+  </div>
 </body>
 </html>
