@@ -1,32 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Doctor AI Summary</title>
   <style>
-    body { font-family: Arial; background: #fff; padding: 20px; }
-    .box { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 6px; background: #f0f8ff; }
-    textarea { width: 100%; height: 100px; }
-    button { padding: 10px 20px; margin-top: 10px; }
-    .logo { float: right; height: 50px; }
-    .avatar { float: left; height: 50px; }
+    body { font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2, h3 { text-align: center; color: #2c3e50; }
+    pre { background: #eef; padding: 15px; white-space: pre-wrap; border-radius: 8px; }
+    form textarea, form button {
+        width: 100%;
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+    .btn {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .btn:hover {
+        background-color: #2980b9;
+    }
+    .back {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .message {
+        background-color: #e0f7fa;
+        border-left: 6px solid #00acc1;
+        padding: 12px;
+        margin-top: 20px;
+        border-radius: 6px;
+    }
   </style>
 </head>
 <body>
-  <img src="/static/logo.png" class="logo">
-  <img src="/static/doctor.jpeg" class="avatar">
-  <h2>Your Educational Summary</h2>
-  <div class="box">{{ summary }}</div>
+  <div class="container">
+    <img src="/static/logo.png" alt="Logo" style="float:right; height:60px;">
+    <img src="/static/doctor.jpeg" alt="Doctor" style="float:left; height:60px;">
+    <div style="clear:both;"></div>
+    <h2>Your AI Summary</h2>
+    <pre>{{ summary }}</pre>
 
-  {% if followup %}
-    <h3>Follow-Up Answer</h3>
-    <div class="box">{{ followup }}</div>
-  {% else %}
-    <form action="/followup" method="post">
-      <input type="hidden" name="summary" value="{{ summary }}">
-      <label>Do you have a follow-up question?</label>
-      <textarea name="followup" required></textarea>
-      <button type="submit">Submit Follow-Up</button>
-    </form>
-  {% endif %}
+    {% if followup %}
+      <h3>Follow-Up Answer:</h3>
+      <pre>{{ followup }}</pre>
+      {% if subscribed %}
+        <div class="message">Thank you for being a subscriber. You can ask unlimited follow-up questions and/or click the link at the end to start a new session.</div>
+      {% else %}
+        <div class="message">This is your one free use. Please subscribe by clicking the link below for continued unlimited access.</div>
+        <div class="back">
+          <a href="https://payhip.com/b/Da82I" target="_blank"><button class="btn">Subscribe for Unlimited Access</button></a>
+        </div>
+      {% endif %}
+    {% else %}
+      <form method="post" action="/followup">
+        <label for="followup"><strong>Ask a follow-up question based on your summary:</strong></label>
+        <textarea name="followup" rows="3" placeholder="E.g., What should I do next if my symptoms worsen?"></textarea>
+        <button class="btn" type="submit">Submit Follow-Up Question</button>
+      </form>
+    {% endif %}
+
+    <div class="back">
+      <a href="/"><button class="btn">Back to Form</button></a>
+    </div>
+  </div>
 </body>
 </html>
