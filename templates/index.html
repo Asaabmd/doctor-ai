@@ -2,162 +2,244 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Doctor AI - Smart Health Assistant</title>
+  <title>Doctor AI – Symptom Checker (Educational)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      padding: 20px;
+    :root {
+      --blue: #0b72d9;
+      --blue-dark: #065bb0;
+      --muted: #475569;
+      --bg: #f8fbff;
+      --panel: #ffffff;
+      --note: #e6f0ff;
     }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    html, body {
+      margin: 0; padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg); color: #0f172a; line-height: 1.6;
     }
-    .logo {
-      width: 100px;
+    .wrap { max-width: 900px; margin: auto; padding: 20px; }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+    header img.logo { height:60px; }
+    header img.doctor { height:60px; border-radius:12px; }
+    h1 { text-align:center; color: var(--blue-dark); margin: 8px 0 16px; }
+
+    .info, .reminder, .disclaimer {
+      background: var(--note);
+      padding: 14px 16px;
+      border-radius: 10px;
+      border-left: 5px solid var(--blue-dark);
+      margin-bottom: 16px;
     }
-    .doctor {
-      width: 100px;
+    .panel {
+      background: var(--panel);
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.06);
+      padding: 18px;
     }
-    .highlight {
-      background-color: #e0f0ff;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 6px;
-    }
-    label {
-      font-weight: bold;
-    }
-    textarea, input, select {
+
+    .row { margin-bottom: 14px; }
+    label { font-weight: 700; color: var(--muted); display:block; margin-bottom:6px; }
+
+    input, textarea, select {
       width: 100%;
-      padding: 10px;
-      margin: 5px 0 15px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      background-color: white;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      outline: none;
     }
-    .mic-button {
-      background: none;
-      border: none;
+    textarea { min-height: 90px; resize: vertical; }
+
+    .micline { display:flex; align-items:center; gap:8px; }
+    .mic-btn {
+      padding: 6px 10px;
+      font-weight: 700;
+      background: #cce5ff;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 1.2em;
-      margin-left: 5px;
     }
+
+    .submit {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .submit:hover { background: var(--blue-dark); }
   </style>
+
   <script>
-    function startDictation(id) {
-      if (window.hasOwnProperty('webkitSpeechRecognition')) {
-        var recognition = new webkitSpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = "en-US";
-        recognition.start();
-        recognition.onresult = function(e) {
-          document.getElementById(id).value = e.results[0][0].transcript;
-          recognition.stop();
-        };
-        recognition.onerror = function(e) {
-          recognition.stop();
-        };
-      }
-    }
-
-    function autoAdvance(currentFieldId, nextFieldId) {
-      document.getElementById(currentFieldId).addEventListener("keydown", function(e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          document.getElementById(nextFieldId).scrollIntoView({ behavior: "smooth" });
-          document.getElementById(nextFieldId).focus();
-        }
+    // Enter-to-advance & smooth scroll
+    document.addEventListener("DOMContentLoaded", () => {
+      const fields = Array.from(document.querySelectorAll("input, textarea, select"));
+      fields.forEach((el, idx) => {
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey && el.tagName !== "SELECT") {
+            e.preventDefault();
+            const next = fields[idx + 1];
+            if (next) {
+              next.focus();
+              next.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }
+        });
       });
-    }
+    });
 
-    window.onload = function() {
-      const fields = [
-        "email", "age", "sex", "symptoms", "conditions", "allergies", "medications",
-        "onset", "better", "worse", "severity", "treatments"
-      ];
-      for (let i = 0; i < fields.length - 1; i++) {
-        autoAdvance(fields[i], fields[i + 1]);
+    // Web Speech API (Chrome/Edge)
+    function startDictation(btn, fieldId) {
+      const field = document.getElementById(fieldId);
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        alert("Speech recognition not supported. Please use Chrome or Edge.");
+        return;
       }
-    };
+      const recog = new SR();
+      recog.lang = "en-US";
+      recog.interimResults = false;
+      recog.maxAlternatives = 1;
+
+      btn.disabled = true;
+      recog.onresult = (ev) => {
+        const t = ev.results[0][0].transcript.trim();
+        field.value += (field.value ? " " : "") + t;
+        field.focus();
+      };
+      recog.onerror = () => alert("Mic error. Try again.");
+      recog.onend = () => { btn.disabled = false; };
+      recog.start();
+    }
   </script>
 </head>
 <body>
-  <div class="header">
-    <img src="{{ url_for('static', filename='doctor.jpeg') }}" alt="Doctor" class="doctor" />
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo" />
-  </div>
+  <div class="wrap">
+    <header>
+      <img src="/static/doctor.jpeg" class="doctor" alt="Doctor">
+      <img src="/static/logo.png" class="logo" alt="Logo">
+    </header>
 
-  <h2>Doctor AI - Smart Health Assistant</h2>
-  <div class="highlight">
-    <strong>What this app does:</strong> Doctor AI provides an educational summary based on your symptoms, including possible causes, over-the-counter options, home remedies, and red flags. This is for educational purposes only and not a substitute for a physician.
-  </div>
+    <h1>Doctor AI</h1>
 
-  <form method="POST" action="/summary">
-    <label>Email (required):</label>
-    <input type="email" name="email" id="email" required placeholder="Enter your email" />
-
-    <label>Age:</label>
-    <input type="number" name="age" id="age" placeholder="Enter your age in years" />
-
-    <label>Sex:</label>
-    <select name="sex" id="sex">
-      <option value="">Select your sex</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select>
-
-    <label>Describe your symptoms:</label>
-    <textarea name="symptoms" id="symptoms" placeholder="Describe your symptoms in detail. The more details you provide, the more customized your summary will be."></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('symptoms')">🎤</button>
-
-    <label>Existing conditions:</label>
-    <textarea name="conditions" id="conditions" placeholder="What are your current medical conditions?"></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('conditions')">🎤</button>
-
-    <label>Allergies:</label>
-    <textarea name="allergies" id="allergies" placeholder="Allergies to medications, food, or other items. If none, enter 'None'."></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('allergies')">🎤</button>
-
-    <label>Current medications:</label>
-    <textarea name="medications" id="medications" placeholder="What medications do you take?"></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('medications')">🎤</button>
-
-    <label>When did it start?</label>
-    <textarea name="onset" id="onset" placeholder="When did your current symptoms start?"></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('onset')">🎤</button>
-
-    <label>What makes it better?</label>
-    <textarea name="better" id="better" placeholder="What makes your symptoms better? If not sure, enter 'NA'."></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('better')">🎤</button>
-
-    <label>What makes it worse?</label>
-    <textarea name="worse" id="worse" placeholder="What makes your symptoms worse? If not sure, enter 'NA'."></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('worse')">🎤</button>
-
-    <label>Severity (1–10):</label>
-    <textarea name="severity" id="severity" placeholder="How severe are your symptoms? (10 is the most severe)"></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('severity')">🎤</button>
-
-    <label>What have you tried?</label>
-    <textarea name="treatments" id="treatments" placeholder="What medications or remedies have you tried for your symptoms?"></textarea>
-    <button class="mic-button" type="button" onclick="startDictation('treatments')">🎤</button>
-
-    <div class="highlight">
-      ✅ <strong>Please complete all fields thoroughly.</strong><br/>
-      ⏳ After clicking Submit, please wait a few moments for your personalized summary to appear.
+    <div class="info">
+      <p><strong>What this app does:</strong> Doctor AI provides a personalized, <em>educational</em> summary based on your symptoms — including possible causes, red flags, and home/OTC options. This tool is not a substitute for professional care.</p>
+      <p>You can type or click 🎤 to speak. Press <strong>Enter</strong> to jump to the next question. The more detail you provide, the more specific your summary will be.</p>
     </div>
 
-    <button type="submit">Submit</button>
-  </form>
+    <form class="panel" method="POST" action="/submit" autocomplete="off">
+      <div class="row">
+        <label for="email">Your Email (required to check subscription)</label>
+        <input type="email" id="email" name="email" required placeholder="name@example.com" />
+      </div>
 
-  <br />
-  <div class="highlight">
-    <strong>Disclaimer:</strong> This app is for educational purposes only and is not a substitute for professional medical care.
+      <div class="row">
+        <label for="sex">Sex</label>
+        <select id="sex" name="sex" required>
+          <option value="">Select your sex</option>
+          <option>Male</option><option>Female</option><option>Other</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="age_group">Age Group</label>
+        <select id="age_group" name="age_group" required>
+          <option value="">Select age group</option>
+          <option>0–12 (Child)</option>
+          <option>13–19 (Teen)</option>
+          <option>20–39 (Young Adult)</option>
+          <option>40–64 (Adult)</option>
+          <option>65+ (Senior)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="symptoms">Describe your symptoms</label>
+        <div class="micline">
+          <textarea id="symptoms" name="symptoms" required placeholder="Describe your symptoms in detail (onset, location, character, timing, associated symptoms, pattern). The more details you provide, the more customized your summary."></textarea>
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'symptoms')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="conditions">Existing conditions</label>
+        <div class="micline">
+          <textarea id="conditions" name="conditions" placeholder="List your current/chronic medical conditions. If none, enter 'None'."></textarea>
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'conditions')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="allergies">Allergies</label>
+        <div class="micline">
+          <textarea id="allergies" name="allergies" placeholder="Allergies to medications, foods, or other items. If none, enter 'None'."></textarea>
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'allergies')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="medications">Current medications</label>
+        <div class="micline">
+          <textarea id="medications" name="medications" placeholder="List all prescription and over-the-counter medications and supplements."></textarea>
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'medications')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="onset">When did it start?</label>
+        <div class="micline">
+          <input id="onset" name="onset" placeholder="For example: 'Three days ago' or 'This morning'">
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'onset')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="better">What makes it better?</label>
+        <div class="micline">
+          <input id="better" name="better" placeholder="Rest, fluids, certain positions, medications… If not sure, enter 'Not sure'." />
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'better')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="worse">What makes it worse?</label>
+        <div class="micline">
+          <input id="worse" name="worse" placeholder="Movement, eating, stress, certain times… If not sure, enter 'Not sure'." />
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'worse')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="severity">Severity (1–10)</label>
+        <div class="micline">
+          <input id="severity" name="severity" placeholder="Rate your symptoms from 1 (mild) to 10 (most severe). Example: '7/10'." />
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'severity')">🎤</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="tried">What have you tried?</label>
+        <div class="micline">
+          <textarea id="tried" name="tried" placeholder="Medications (with doses), home remedies, rest, ice/heat, hydration, etc."></textarea>
+          <button class="mic-btn" type="button" onclick="startDictation(this, 'tried')">🎤</button>
+        </div>
+      </div>
+
+      <div class="reminder">
+        ⏳ Please complete all fields and wait a few moments after clicking Submit.
+      </div>
+      <button class="submit" type="submit">Submit for Summary</button>
+    </form>
+
+    <div class="disclaimer" style="margin-top:14px;">
+      <strong>Disclaimer:</strong> Doctor AI is for educational purposes only and does not provide medical advice, diagnosis, or treatment. If you think you may have a medical emergency, call your local emergency number.
+    </div>
   </div>
 </body>
 </html>

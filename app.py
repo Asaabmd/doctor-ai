@@ -9,106 +9,127 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
 
-def is_subscribed(email):
+def is_subscribed(email: str) -> bool:
     try:
         with open(SUBSCRIPTIONS_FILE, "r") as f:
             subs = json.load(f)
         return subs.get(email.lower(), {}).get("status") == "active"
-    except:
+    except Exception:
         return False
 
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
 
-@app.route("/summary", methods=["POST"])
-def summary():
-    email = request.form.get("email", "").strip().lower()
+@app.route("/submit", methods=["POST"])
+def submit():
+    # Collect inputs
+    email = (request.form.get("email") or "").strip().lower()
     session["email"] = email
-    session["used"] = session.get("used", False)
-    subscribed = is_subscribed(email)
+    session["is_subscribed"] = is_subscribed(email)
 
-    if not subscribed and session["used"]:
-        return redirect(url_for("subscribe"))
-
-    data = {
-        "Age": request.form.get("age", ""),
+    payload = {
         "Sex": request.form.get("sex", ""),
+        "Age Group": request.form.get("age_group", ""),
         "Symptoms": request.form.get("symptoms", ""),
-        "Conditions": request.form.get("conditions", ""),
+        "Existing Conditions": request.form.get("conditions", ""),
         "Allergies": request.form.get("allergies", ""),
         "Medications": request.form.get("medications", ""),
         "Onset": request.form.get("onset", ""),
-        "Better": request.form.get("better", ""),
-        "Worse": request.form.get("worse", ""),
+        "Better With": request.form.get("better", ""),
+        "Worse With": request.form.get("worse", ""),
         "Severity": request.form.get("severity", ""),
-        "Tried": request.form.get("treatments", "")
+        "Tried": request.form.get("tried", ""),
     }
+    session["intake"] = payload
 
-    prompt = "You are a helpful AI healthcare assistant. Based on the details provided, create a friendly, informative, and easy-to-understand summary including:
-- Possible causes
-- Over-the-counter remedies
-- Home treatments
-- Red flags to watch for
-
-Details:
-"
-    for k, v in data.items():
-        prompt += f"{k}: {v}
-"
+    # Build a safe multiline prompt (no unterminated quotes)
+    prompt = (
+        "You are a helpful AI healthcare assistant. Using the patient intake below, "
+        "write a friendly, easy-to-understand, and strictly educational summary. "
+        "Include: possible causes, home measures, over-the-counter options when appropriate, "
+        "clear red flags, and when to seek urgent care. End with a strong disclaimer that "
+        "this is not medical advice.\n\n"
+        f"Patient Intake:\n"
+        + "\n".join([f"- {k}: {v}" for k, v in payload.items()])
+    )
 
     try:
-        response = openai.ChatCompletion.create(
+        resp = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+            messages=[
+                {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
         )
-        summary_text = response.choices[0].message["content"].strip()
+        summary_text = resp.choices[0].message.content.strip()
     except Exception as e:
-        summary_text = f"Error generating summary: {e}"
+        summary_text = "⚠️ Error generating summary. Please try again later."
 
-    session["used"] = True
-    session["subscribed"] = subscribed
     session["summary"] = summary_text
+    # For free users we allow one summary + one follow-up; we track if they used follow-up later.
+    session.setdefault("used_followup", False)
 
-    return render_template("summary.html", summary=summary_text, subscribed=subscribed)
+    return render_template("summary.html",
+                           summary=summary_text,
+                           is_subscribed=session["is_subscribed"],
+                           followup_response="")
 
-@app.route("/followup", methods=["POST"])
-def followup():
-    email = session.get("email")
-    subscribed = is_subscribed(email)
+@app.route("/summary", methods=["GET", "POST"])
+def summary():
+    # POST here handles a follow-up question
+    if request.method == "POST":
+        question = (request.form.get("followup") or "").strip()
+        prev_summary = session.get("summary", "")
 
-    if not subscribed and session.get("followed_up"):
-        return redirect(url_for("subscribe"))
+        if not session.get("is_subscribed", False) and session.get("used_followup", False):
+            # Non-subscribers get only one follow-up
+            return render_template("summary.html",
+                                   summary=prev_summary,
+                                   is_subscribed=False,
+                                   followup_response="This is your one free use. Please subscribe by clicking the link below for continued unlimited access.")
 
-    question = request.form.get("followup", "")
-    context = session.get("summary", "")
-
-    prompt = f"You provided this earlier summary:
-
-{context}
-
-Now the user asks: {question}
-
-Please provide a helpful follow-up answer."
-
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+        followup_prompt = (
+            "The following is an educational summary previously given to a user. "
+            "Answer the user's follow-up question clearly and compassionately. "
+            "Remind them this is educational only.\n\n"
+            f"Summary:\n{prev_summary}\n\n"
+            f"Follow-up question:\n{question}"
         )
-        followup_answer = response.choices[0].message["content"].strip()
-    except Exception as e:
-        followup_answer = f"Error generating follow-up: {e}"
 
-    session["followed_up"] = True
+        try:
+            resp = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
+                    {"role": "user", "content": followup_prompt},
+                ],
+                temperature=0.6,
+            )
+            answer = resp.choices[0].message.content.strip()
+        except Exception:
+            answer = "⚠️ Error generating follow-up. Please try again."
 
-    return render_template("summary.html", summary=session.get("summary", ""), followup=followup_answer, subscribed=subscribed)
+        # Mark free user's single follow-up as used
+        if not session.get("is_subscribed", False):
+            session["used_followup"] = True
 
-@app.route("/subscribe")
-def subscribe():
-    return redirect("https://payhip.com/b/Da82I")
+        return render_template("summary.html",
+                               summary=prev_summary,
+                               is_subscribed=session.get("is_subscribed", False),
+                               followup_response=answer)
+
+    # GET -> show the current summary page
+    return render_template("summary.html",
+                           summary=session.get("summary", ""),
+                           is_subscribed=session.get("is_subscribed", False),
+                           followup_response="")
+
+@app.route("/reset")
+def reset():
+    session.clear()
+    return redirect(url_for("index"))
 
 if __name__ == "__main__":
     app.run(debug=True)
