@@ -11,14 +11,14 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace-this-key")
 
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 if not OPENAI_API_KEY:
-    log.warning("OPENAI_API_KEY not set. Will show a friendly error to users.")
+    log.warning("OPENAI_API_KEY not set. Will use fallback summary; /diag will report missing key.")
 
-# --- Support both OpenAI SDKs ---
+# ---------- OpenAI dual-SDK support ----------
 client = None
 use_v1_client = False
 sdk_version = "unknown"
 try:
-    # v1 client
+    # New SDK (v1+)
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else OpenAI()
     use_v1_client = True
@@ -26,7 +26,7 @@ try:
     log.info("Using OpenAI v1 client")
 except Exception:
     try:
-        # legacy client
+        # Legacy SDK
         import openai  # type: ignore
         if OPENAI_API_KEY:
             openai.api_key = OPENAI_API_KEY
@@ -74,15 +74,17 @@ def is_subscribed(email: str, req=None) -> bool:
 
 # ---------- OpenAI helpers ----------
 TRY_MODELS_V1 = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"]
-TRY_MODELS_LEGACY = ["gpt-4", "gpt-3.5-turbo"]
+TRY_MODELS_LEGACY = ["gpt-4", "gpt-3.5-turbo"]  # legacy names
+DEFAULT_TEMPERATURE = 0.6
+TIMEOUT_SECS = 30  # avoid hanging requests
 
-def chat_complete(messages, temperature=0.6):
+def chat_complete(messages, temperature=DEFAULT_TEMPERATURE):
     """
     Try several models until one succeeds.
-    Returns (text, model_used) or raises RuntimeError with detail.
+    Returns (text, model_used). Raises RuntimeError on failure.
     """
     if not OPENAI_API_KEY or not client:
-        raise RuntimeError("OpenAI client or API key not configured")
+        raise RuntimeError("OpenAI not configured (missing API key or client)")
 
     errors = []
     if use_v1_client:
@@ -92,6 +94,7 @@ def chat_complete(messages, temperature=0.6):
                     model=m,
                     messages=messages,
                     temperature=temperature,
+                    timeout=TIMEOUT_SECS,
                 )
                 return resp.choices[0].message.content, m
             except Exception as e:
@@ -104,6 +107,7 @@ def chat_complete(messages, temperature=0.6):
                     model=m,
                     messages=messages,
                     temperature=temperature,
+                    request_timeout=TIMEOUT_SECS,
                 )
                 return resp.choices[0].message["content"], m
             except Exception as e:
@@ -129,7 +133,41 @@ def build_followup_prompt(prev_summary: str, question: str) -> str:
         f"Follow-up question:\n{question}"
     )
 
-# ---------- Webhook ----------
+# ---------- Fallback summary (no OpenAI) ----------
+def rule_based_summary(payload: dict) -> str:
+    # A simple deterministic summary so users always get something useful
+    parts = []
+    sx = payload.get("Symptoms", "").strip()
+    sev = payload.get("Severity", "").strip()
+    onset = payload.get("Onset", "").strip()
+    better = payload.get("Better With", "").strip()
+    worse = payload.get("Worse With", "").strip()
+    tried = payload.get("Tried", "").strip()
+    cond = payload.get("Existing Conditions", "").strip()
+    meds = payload.get("Medications", "").strip()
+    ageg = payload.get("Age Group", "").strip()
+    sex = payload.get("Sex", "").strip()
+
+    parts.append(f"Patient: {ageg or 'Age group not specified'}; Sex: {sex or 'not specified'}.")
+    if sx: parts.append(f"Key symptoms: {sx}.")
+    if onset: parts.append(f"Started: {onset}.")
+    if sev: parts.append(f"Severity reported: {sev} (1–10 scale).")
+    if cond: parts.append(f"Existing conditions: {cond}.")
+    if meds: parts.append(f"Current meds/supplements: {meds}.")
+    if better: parts.append(f"Feels better with: {better}.")
+    if worse: parts.append(f"Worse with: {worse}.")
+    if tried: parts.append(f"Treatments already tried: {tried}.")
+
+    parts.append("\nPossible next steps (educational):")
+    parts.append("- Rest, hydration, and balanced nutrition are broadly helpful for many mild conditions.")
+    parts.append("- Consider OTC options only if appropriate for you (check labels for age/condition interactions).")
+    parts.append("- Track symptoms: timing, severity changes, triggers, and any associated features (fever, rash, shortness of breath, chest pain, confusion).")
+    parts.append("- If symptoms rapidly worsen, new neurological signs occur, or red-flag symptoms appear (severe chest pain, trouble breathing, fainting, uncontrolled bleeding), seek urgent care.")
+
+    parts.append("\nDisclaimer: This summary is for educational purposes only and is not medical advice. Always consult a licensed clinician for diagnosis or treatment.")
+    return "\n".join(parts)
+
+# ---------- Webhook (keep Payhip sync) ----------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -166,6 +204,34 @@ def webhook():
 
     return jsonify({"ok": True, "email": email, "status": subs[email]["status"]}), 200
 
+# ---------- Diagnostics ----------
+@app.route("/diag")
+def diag():
+    # Tiny self-check; safe to call from a browser
+    result = {
+        "sdk": sdk_version,
+        "key_present": bool(OPENAI_API_KEY),
+    }
+    if not OPENAI_API_KEY or client is None:
+        result["openai_status"] = "missing"
+        return jsonify(result), 200
+
+    try:
+        txt, model_used = chat_complete(
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Say PONG."},
+            ],
+            temperature=0.0,
+        )
+        result["openai_status"] = "ok"
+        result["model_used"] = model_used
+        result["reply"] = txt[:200]
+    except Exception as e:
+        result["openai_status"] = "error"
+        result["error"] = str(e)[:500]
+    return jsonify(result), 200
+
 # ---------- Pages ----------
 @app.route("/", methods=["GET"])
 def index():
@@ -193,45 +259,36 @@ def submit():
         }
         session["intake"] = payload
 
-        if not OPENAI_API_KEY or client is None:
-            summary_text = ("⚠️ OpenAI is not configured on the server. "
-                            "Ask your admin to set OPENAI_API_KEY and redeploy.")
-            reason = "Missing API key or SDK"
-            model_used = "n/a"
-        else:
-            try:
-                summary_text, model_used = chat_complete(
-                    messages=[
-                        {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
-                        {"role": "user", "content": build_summary_prompt(payload)},
-                    ],
-                    temperature=0.6,
-                )
-                reason = ""
-            except Exception as e:
-                log.exception("OpenAI summary error")
-                summary_text = "⚠️ Error generating summary. Please try again shortly."
-                reason = str(e)
-                model_used = "n/a"
+        # Try OpenAI -> fallback if needed
+        reason, model_used = "", "n/a"
+        try:
+            text, model_used = chat_complete(
+                messages=[
+                    {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
+                    {"role": "user", "content": build_summary_prompt(payload)},
+                ],
+                temperature=DEFAULT_TEMPERATURE,
+            )
+            summary_text = text.strip()
+        except Exception as e:
+            log.exception("OpenAI summary error")
+            reason = str(e)
+            summary_text = rule_based_summary(payload)
 
-        # Save & render
-        session["summary"] = summary_text or "⚠️ No summary returned."
+        session["summary"] = summary_text or rule_based_summary(payload)
         session.setdefault("used_followup", False)
 
-        # Show a tiny diagnostics line (safe, masked) to help you fix quickly
-        diag = f"(SDK={sdk_version} | model={model_used} | reason={reason[:160]})" if reason else f"(SDK={sdk_version} | model={model_used})"
-
-        return render_template(
-            "summary.html",
-            summary=session["summary"] + ("\n\n" + diag if diag else ""),
-            is_subscribed=session["is_subscribed"],
-            followup_response="",
-        )
-    except Exception as e:
+        diag = f"(SDK={sdk_version} | model={model_used}" + (f" | reason={reason[:160]}" if reason else "") + ")"
+        return render_template("summary.html",
+                               summary=session["summary"] + f"\n\n{diag}",
+                               is_subscribed=session["is_subscribed"],
+                               followup_response="")
+    except Exception:
         log.exception("Unhandled error in /submit")
+        # Absolute fallback
         return render_template(
             "summary.html",
-            summary="⚠️ Something went wrong while processing your request.",
+            summary="⚠️ An unexpected error occurred, but the page loaded. Try again.",
             is_subscribed=False,
             followup_response=""
         ), 200
@@ -255,36 +312,33 @@ def summary():
                     followup_response="This is your one free use. Please subscribe by clicking the link below for continued unlimited access."
                 )
 
-            if not OPENAI_API_KEY or client is None:
-                answer = "⚠️ OpenAI is not configured on the server."
-                reason = "Missing API key or SDK"
-                model_used = "n/a"
-            else:
-                try:
-                    answer, model_used = chat_complete(
-                        messages=[
-                            {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
-                            {"role": "user", "content": build_followup_prompt(prev_summary, question)},
-                        ],
-                        temperature=0.6,
-                    )
-                    reason = ""
-                except Exception as e:
-                    log.exception("OpenAI follow-up error")
-                    answer = "⚠️ Error generating follow-up. Please try again."
-                    reason = str(e)
-                    model_used = "n/a"
+            reason, model_used = "", "n/a"
+            try:
+                answer, model_used = chat_complete(
+                    messages=[
+                        {"role": "system", "content": "You are a helpful healthcare assistant (education only)."},
+                        {"role": "user", "content": build_followup_prompt(prev_summary, question)},
+                    ],
+                    temperature=DEFAULT_TEMPERATURE,
+                )
+            except Exception as e:
+                log.exception("OpenAI follow-up error")
+                reason = str(e)
+                # fallback: simple deterministic reply
+                answer = ("Thanks for your question. Based on the previous summary, continue supportive care "
+                          "unless any red flags develop (worsening pain, breathing issues, chest pain, fainting, new weakness, "
+                          "confusion). For persistent/worsening symptoms, contact your clinician.\n\n"
+                          "Disclaimer: educational only, not medical advice.")
 
             if not subscribed:
                 session["used_followup"] = True
 
-            diag = f"(SDK={sdk_version} | model={model_used} | reason={reason[:160]})" if reason else f"(SDK={sdk_version} | model={model_used})"
-
+            diag = f"(SDK={sdk_version} | model={model_used}" + (f" | reason={reason[:160]}" if reason else "") + ")"
             return render_template(
                 "summary.html",
                 summary=prev_summary,
                 is_subscribed=subscribed,
-                followup_response=answer + ("\n\n" + diag if diag else "")
+                followup_response=answer + f"\n\n{diag}"
             )
 
         return render_template(
