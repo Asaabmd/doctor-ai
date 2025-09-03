@@ -29,9 +29,9 @@
     .mic-btn{padding:6px 10px;font-weight:700;cursor:pointer;background:#cce5ff;border:1px solid #93c5fd;border-radius:10px}
     .submit{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:16px;cursor:pointer}
     .submit:hover{background:var(--blue-dark)}
-    .reminder{margin-top:10px;font-weight:700;color:var(--warn)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .ghost{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .reminder{margin-top:10px;font-weight:700;color:var(--warn)}
     .disclaimer{color:var(--muted);font-size:.95rem}
     @media (max-width:560px){header{gap:10px}header img.doctor,header img.logo{height:54px;width:auto}}
   </style>
@@ -109,7 +109,7 @@
       r.start();
     }
 
-    // Enter (without Shift) advances focus and scrolls smoothly to the next field
+    // Enter moves to next field, Shift+Enter inserts newline
     document.addEventListener("DOMContentLoaded", ()=>{
       // Restore previously saved answers (on this device)
       restoreFormFromLocalStorage();
@@ -132,14 +132,15 @@
       // Enter key navigation
       fields.forEach((el, idx)=>{
         el.addEventListener("keydown", (e)=>{
-          if(e.key==="Enter" && !e.shiftKey && el.tagName!=="TEXTAREA"){
-            e.preventDefault();
+          if(e.key === "Enter" && !e.shiftKey){
+            e.preventDefault(); // prevent newline even in textarea
             const next = fields[idx+1];
             if(next){
               next.focus();
               next.scrollIntoView({behavior:"smooth", block:"center"});
             }
           }
+          // Shift+Enter = allow newline (default)
         });
       });
     });
@@ -158,7 +159,8 @@
       <p><strong>Doctor AI</strong> provides personalized, educational summaries based on the information you enter. It is <u>not a substitute for professional medical care</u>. Always consult a clinician for diagnosis or treatment.</p>
       <p>Free users get one summary and one follow-up. Subscribers enjoy unlimited use.</p>
       <p>This page remembers your answers on <em>this device only</em> to help you continue where you left off. You can clear them anytime.</p>
-      <p>You can type or click <strong>🎤 Speak</strong> to use your voice. Press <strong>Enter</strong> to jump to the next field.</p>
+      <p>You can type or click <strong>🎤 Speak</strong> to use your voice.</p>
+      <p><strong>Press Enter</strong> to move to the next field. Use <strong>Shift+Enter</strong> if you want a new line inside a box.</p>
     </div>
 
     <form method="POST" action="/submit" class="card">
