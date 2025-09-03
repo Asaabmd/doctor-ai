@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Doctor AI – Summary</title>
+  <title>My AI Doctor – Summary</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -17,14 +17,8 @@
       --warn-bg: #fff7ed;
       --warn-text: #9a3412;
     }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      line-height: 1.6;
-    }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; }
     .wrap { max-width: 980px; margin: auto; padding: 20px; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     header img.doctor { height: 64px; width: 64px; border-radius: 16px; object-fit: cover; }
@@ -71,15 +65,14 @@
       r.start();
     }
 
-    // On every load: ready the follow-up box; Enter submits, Shift+Enter new line
+    // Ready the follow-up box; Enter submits, Shift+Enter adds a newline
     window.addEventListener("load", () => {
       const el = document.getElementById("followup");
       if (el) {
-        el.value = ""; // clear box after each round
+        el.value = ""; // clear after each round
         el.focus();
         setTimeout(() => el.scrollIntoView({behavior:"smooth", block:"center"}), 200);
 
-        // Enter = submit, Shift+Enter = newline
         el.addEventListener("keydown", (e)=>{
           if(e.key === "Enter" && !e.shiftKey){
             e.preventDefault();
@@ -105,7 +98,7 @@
   <div class="wrap">
     <header>
       <img src="/static/doctor.jpeg" class="doctor" alt="Doctor" />
-      <img src="/static/logo.png" class="logo" alt="Logo" />
+      <img src="/static/logo.png" class="logo" alt="My AI Doctor logo" />
     </header>
 
     <h1>Your Educational Health Summary</h1>

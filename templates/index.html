@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Doctor AI - Symptom Checker</title>
+  <title>My AI Doctor - Symptom Checker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -38,15 +38,13 @@
 
   <script>
     // ---------- Local storage keys ----------
-    const FORM_KEY = "doctorai_intake_v1"; // stored only on this device/browser
+    const FORM_KEY = "myaidoctor_intake_v1"; // stored only on this device/browser
 
-    // ---------- Helpers ----------
     function qsAll(sel){ return Array.from(document.querySelectorAll(sel)); }
     function firstEmptyField(fields){
       return fields.find(f => !f.value || (f.tagName==="SELECT" && !f.value));
     }
 
-    // Save all current form values to localStorage
     function saveFormToLocalStorage(){
       const data = {};
       qsAll('input[type="text"], input[type="email"], textarea, select').forEach(el=>{
@@ -55,7 +53,6 @@
       try { localStorage.setItem(FORM_KEY, JSON.stringify(data)); } catch(e) {}
     }
 
-    // Restore values from localStorage if present
     function restoreFormFromLocalStorage(){
       try{
         const raw = localStorage.getItem(FORM_KEY);
@@ -68,12 +65,10 @@
       }catch(e){}
     }
 
-    // Clear both the form and localStorage
     function clearFormAndStorage(){
       localStorage.removeItem(FORM_KEY);
       qsAll('input[type="text"], input[type="email"], textarea').forEach(el=> el.value = "");
       qsAll('select').forEach(el=> el.selectedIndex = 0);
-      // Focus first field after clearing
       const fields = qsAll("input, textarea, select");
       if(fields.length){
         const f = fields[0];
@@ -82,7 +77,6 @@
       }
     }
 
-    // Speech-to-text for a given field with smooth scroll + focus to next field
     function startDictation(btn, fieldId){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if(!SR){ alert("Speech recognition is not supported in this browser. Please use Chrome or Edge."); return; }
@@ -94,7 +88,7 @@
         const t = e.results[0][0].transcript.trim();
         field.value += (field.value ? " " : "") + t;
         field.focus();
-        saveFormToLocalStorage(); // save after dictation inserts text
+        saveFormToLocalStorage();
       };
       r.onerror = ()=>alert("Microphone error. Please try again.");
       r.onend = ()=>{
@@ -109,12 +103,10 @@
       r.start();
     }
 
-    // Enter moves to next field, Shift+Enter inserts newline
+    // Enter -> next field; Shift+Enter -> newline
     document.addEventListener("DOMContentLoaded", ()=>{
-      // Restore previously saved answers (on this device)
       restoreFormFromLocalStorage();
 
-      // Wire up autosave on change/input across fields
       qsAll('input[type="text"], input[type="email"], textarea, select').forEach(el=>{
         el.addEventListener("input", saveFormToLocalStorage);
         el.addEventListener("change", saveFormToLocalStorage);
@@ -122,25 +114,22 @@
 
       const fields = qsAll("input, textarea, select");
 
-      // Auto-scroll to the first empty field on load; if all filled, focus first field
       const empty = firstEmptyField(fields) || fields[0];
       if(empty){
         empty.focus();
         setTimeout(()=>empty.scrollIntoView({behavior:"smooth", block:"center"}), 200);
       }
 
-      // Enter key navigation
       fields.forEach((el, idx)=>{
         el.addEventListener("keydown", (e)=>{
           if(e.key === "Enter" && !e.shiftKey){
-            e.preventDefault(); // prevent newline even in textarea
+            e.preventDefault();
             const next = fields[idx+1];
             if(next){
               next.focus();
               next.scrollIntoView({behavior:"smooth", block:"center"});
             }
           }
-          // Shift+Enter = allow newline (default)
         });
       });
     });
@@ -150,13 +139,13 @@
   <div class="wrap">
     <header>
       <img src="/static/doctor.jpeg" class="doctor" alt="Doctor" />
-      <img src="/static/logo.png" class="logo" alt="Logo" />
+      <img src="/static/logo.png" class="logo" alt="My AI Doctor logo" />
     </header>
 
-    <h1>Doctor AI</h1>
+    <h1>My AI Doctor</h1>
 
     <div class="info">
-      <p><strong>Doctor AI</strong> provides personalized, educational summaries based on the information you enter. It is <u>not a substitute for professional medical care</u>. Always consult a clinician for diagnosis or treatment.</p>
+      <p><strong>My AI Doctor</strong> provides personalized, educational summaries based on the information you enter. It is <u>not a substitute for professional medical care</u>. Always consult a clinician for diagnosis or treatment.</p>
       <p>Free users get one summary and one follow-up. Subscribers enjoy unlimited use.</p>
       <p>This page remembers your answers on <em>this device only</em> to help you continue where you left off. You can clear them anytime.</p>
       <p>You can type or click <strong>🎤 Speak</strong> to use your voice.</p>
@@ -270,7 +259,7 @@
 
     <div class="card">
       <div class="disclaimer">
-        <strong>Disclaimer:</strong> Doctor AI provides educational information only and is <u>not</u> medical advice. It does not diagnose or treat conditions. If your symptoms are severe, rapidly worsening, or you notice red-flag signs (severe chest pain, trouble breathing, fainting, new weakness or numbness, uncontrolled bleeding, confusion), seek urgent care or call your local emergency number.
+        <strong>Disclaimer:</strong> My AI Doctor provides educational information only and is <u>not</u> medical advice. It does not diagnose or treat conditions. If your symptoms are severe, rapidly worsening, or you notice red-flag signs (severe chest pain, trouble breathing, fainting, new weakness or numbness, uncontrolled bleeding, confusion), seek urgent care or call your local emergency number.
       </div>
     </div>
   </div>
