@@ -40,19 +40,42 @@ except Exception:
         log.exception("No OpenAI client available")
 
 SUBSCRIPTIONS_FILE = "subscriptions.json"
+SUBSCRIBED_STATES = {"active", "manual"}  # both count as subscribed
 
 # ---------- Subscription helpers ----------
+def _normalize_subs(data) -> dict:
+    """
+    Normalize JSON into {email: {'status': 'active'|'manual'|'inactive'}}.
+    Accepts dict values or plain strings; unknown labels -> 'inactive'.
+    """
+    norm = {}
+    if isinstance(data, dict):
+        for k, v in data.items():
+            email = (k or "").strip().lower()
+            if not email:
+                continue
+            if isinstance(v, dict):
+                status = (v.get("status") or "").strip().lower()
+            else:
+                status = (str(v) or "").strip().lower()
+            if status not in {"active", "manual", "inactive"}:
+                status = "inactive"
+            norm[email] = {"status": status}
+    return norm
+
 def load_subs() -> dict:
     try:
         with open(SUBSCRIPTIONS_FILE, "r") as f:
-            return json.load(f)
+            raw = json.load(f)
+            return _normalize_subs(raw)
     except Exception:
         return {}
 
 def save_subs(d: dict) -> None:
     try:
+        payload = _normalize_subs(d)
         with open(SUBSCRIPTIONS_FILE, "w") as f:
-            json.dump(d, f)
+            json.dump(payload, f)
     except Exception:
         log.exception("Failed to write subscriptions.json")
 
@@ -60,7 +83,11 @@ def is_subscribed_via_file(email: str) -> bool:
     if not email:
         return False
     subs = load_subs()
-    return subs.get(email.lower().strip(), {}).get("status") == "active"
+    rec = subs.get(email.strip().lower())
+    if not rec:
+        return False
+    status = rec.get("status", "").lower()
+    return status in SUBSCRIBED_STATES  # 'active' or 'manual'
 
 def is_subscribed(email: str, req=None) -> bool:
     file_access = is_subscribed_via_file(email)
@@ -186,16 +213,29 @@ def webhook():
     elif event in deactivate:
         subs[email] = {"status": "inactive"}
     else:
+        # ignore unknown events but return 200 so provider doesn't retry
         return jsonify({"ok": True, "ignored_event": event or "(none)"}), 200
 
     save_subs(subs)
     try:
         if session.get("email", "").strip().lower() == email:
-            session["is_subscribed"] = (subs[email]["status"] == "active")
+            session["is_subscribed"] = (subs[email]["status"] in SUBSCRIBED_STATES)
     except Exception:
         pass
 
     return jsonify({"ok": True, "email": email, "status": subs[email]["status"]}), 200
+
+# ---------- Quick status check ----------
+@app.route("/sub_status")
+def sub_status():
+    email = (request.args.get("email") or session.get("email", "")).strip().lower()
+    subs = load_subs()
+    return jsonify({
+        "email": email,
+        "file_status": subs.get(email),
+        "cookie_access": request.cookies.get("access_granted") == "true",
+        "effective_is_subscribed": is_subscribed(email, request)
+    })
 
 # ---------- Diagnostics ----------
 @app.route("/diag")
