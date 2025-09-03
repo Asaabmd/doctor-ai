@@ -81,7 +81,6 @@
   </style>
 
   <script>
-    // Simple speech-to-text using Web Speech API (Chrome/Edge)
     function startDictation(btn, fieldId) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) { alert("Speech recognition is not supported in this browser. Please use Chrome or Edge."); return; }
@@ -101,7 +100,6 @@
       r.start();
     }
 
-    // Autofocus follow-up box and gently scroll it into view
     window.addEventListener("load", () => {
       const el = document.getElementById("followup");
       if (el) {
@@ -124,7 +122,12 @@
     {% if is_subscribed %}
       <div class="status sub">Status: <strong>Subscribed</strong> — unlimited follow-up questions.</div>
     {% else %}
-      <div class="status free">Status: <strong>Free</strong> — one summary + one follow-up. Subscribe for unlimited access.</div>
+      <div class="status free">
+        Status: <strong>Free</strong> — one summary + one follow-up.
+        <a href="https://payhip.com/b/Da82I" target="_blank" rel="noopener" style="margin-left:8px; text-decoration:underline;">
+          Subscribe for unlimited access
+        </a>.
+      </div>
     {% endif %}
 
     <!-- Main summary text -->
@@ -137,6 +140,14 @@
       <div class="card">
         <h3 class="title-sm">Follow-Up Answer</h3>
         <div style="white-space: pre-wrap">{{ followup_response | safe }}</div>
+
+        {% if not is_subscribed %}
+          <div style="margin-top:12px;">
+            <a href="https://payhip.com/b/Da82I" target="_blank" rel="noopener" style="text-decoration:underline;">
+              Subscribe for unlimited follow-ups
+            </a>
+          </div>
+        {% endif %}
       </div>
     {% endif %}
 
@@ -152,7 +163,7 @@
       <div class="row"><strong>Have a follow-up question?</strong></div>
       <div class="micline">
         <textarea id="followup" name="followup" form="fup" placeholder="Ask a question related to your summary (for example: next steps if pain worsens, which warning signs to watch for, what to try at home). Speak or type your question, then click Submit."></textarea>
-        <button class="mic-btn" type="button" onclick="startDictation(this, 'followup')">🎤 Speak</button>
+        <button class="mic-btn" type="button" aria-label="Start voice input" onclick="startDictation(this, 'followup')">🎤 Speak</button>
       </div>
       <form id="fup" method="POST" action="/summary" class="row">
         <div class="actions">
