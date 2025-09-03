@@ -30,12 +30,59 @@
     .submit{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:16px;cursor:pointer}
     .submit:hover{background:var(--blue-dark)}
     .reminder{margin-top:10px;font-weight:700;color:var(--warn)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .ghost{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;cursor:pointer}
     .disclaimer{color:var(--muted);font-size:.95rem}
     @media (max-width:560px){header{gap:10px}header img.doctor,header img.logo{height:54px;width:auto}}
   </style>
 
   <script>
-    // Speech-to-text for a given field
+    // ---------- Local storage keys ----------
+    const FORM_KEY = "doctorai_intake_v1"; // stored only on this device/browser
+
+    // ---------- Helpers ----------
+    function qsAll(sel){ return Array.from(document.querySelectorAll(sel)); }
+    function firstEmptyField(fields){
+      return fields.find(f => !f.value || (f.tagName==="SELECT" && !f.value));
+    }
+
+    // Save all current form values to localStorage
+    function saveFormToLocalStorage(){
+      const data = {};
+      qsAll('input[type="text"], input[type="email"], textarea, select').forEach(el=>{
+        data[el.id] = el.value;
+      });
+      try { localStorage.setItem(FORM_KEY, JSON.stringify(data)); } catch(e) {}
+    }
+
+    // Restore values from localStorage if present
+    function restoreFormFromLocalStorage(){
+      try{
+        const raw = localStorage.getItem(FORM_KEY);
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        Object.entries(data).forEach(([id,val])=>{
+          const el = document.getElementById(id);
+          if(el != null){ el.value = val; }
+        });
+      }catch(e){}
+    }
+
+    // Clear both the form and localStorage
+    function clearFormAndStorage(){
+      localStorage.removeItem(FORM_KEY);
+      qsAll('input[type="text"], input[type="email"], textarea').forEach(el=> el.value = "");
+      qsAll('select').forEach(el=> el.selectedIndex = 0);
+      // Focus first field after clearing
+      const fields = qsAll("input, textarea, select");
+      if(fields.length){
+        const f = fields[0];
+        f.focus();
+        setTimeout(()=>f.scrollIntoView({behavior:"smooth", block:"center"}), 150);
+      }
+    }
+
+    // Speech-to-text for a given field with smooth scroll + focus to next field
     function startDictation(btn, fieldId){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if(!SR){ alert("Speech recognition is not supported in this browser. Please use Chrome or Edge."); return; }
@@ -45,9 +92,9 @@
       btn.disabled = true;
       r.onresult = e=>{
         const t = e.results[0][0].transcript.trim();
-        // add a space if the field already has text
         field.value += (field.value ? " " : "") + t;
         field.focus();
+        saveFormToLocalStorage(); // save after dictation inserts text
       };
       r.onerror = ()=>alert("Microphone error. Please try again.");
       r.onend = ()=>{
@@ -55,20 +102,43 @@
         const row = field.closest(".row");
         if(row && row.nextElementSibling){
           row.nextElementSibling.scrollIntoView({behavior:"smooth", block:"center"});
+          const nextInput = row.nextElementSibling.querySelector("input, textarea, select");
+          if(nextInput){ nextInput.focus(); }
         }
       };
       r.start();
     }
 
-    // Press Enter (without Shift) to move to next field + smooth scroll
+    // Enter (without Shift) advances focus and scrolls smoothly to the next field
     document.addEventListener("DOMContentLoaded", ()=>{
-      const fields = Array.from(document.querySelectorAll("input, textarea, select"));
+      // Restore previously saved answers (on this device)
+      restoreFormFromLocalStorage();
+
+      // Wire up autosave on change/input across fields
+      qsAll('input[type="text"], input[type="email"], textarea, select').forEach(el=>{
+        el.addEventListener("input", saveFormToLocalStorage);
+        el.addEventListener("change", saveFormToLocalStorage);
+      });
+
+      const fields = qsAll("input, textarea, select");
+
+      // Auto-scroll to the first empty field on load; if all filled, focus first field
+      const empty = firstEmptyField(fields) || fields[0];
+      if(empty){
+        empty.focus();
+        setTimeout(()=>empty.scrollIntoView({behavior:"smooth", block:"center"}), 200);
+      }
+
+      // Enter key navigation
       fields.forEach((el, idx)=>{
         el.addEventListener("keydown", (e)=>{
-          if(e.key==="Enter" && !e.shiftKey && el.tagName!=="TEXTAREA"){ // allow Shift+Enter in textarea
+          if(e.key==="Enter" && !e.shiftKey && el.tagName!=="TEXTAREA"){
             e.preventDefault();
             const next = fields[idx+1];
-            if(next){ next.focus(); next.scrollIntoView({behavior:"smooth", block:"center"}); }
+            if(next){
+              next.focus();
+              next.scrollIntoView({behavior:"smooth", block:"center"});
+            }
           }
         });
       });
@@ -87,6 +157,7 @@
     <div class="info">
       <p><strong>Doctor AI</strong> provides personalized, educational summaries based on the information you enter. It is <u>not a substitute for professional medical care</u>. Always consult a clinician for diagnosis or treatment.</p>
       <p>Free users get one summary and one follow-up. Subscribers enjoy unlimited use.</p>
+      <p>This page remembers your answers on <em>this device only</em> to help you continue where you left off. You can clear them anytime.</p>
       <p>You can type or click <strong>🎤 Speak</strong> to use your voice. Press <strong>Enter</strong> to jump to the next field.</p>
     </div>
 
@@ -188,7 +259,10 @@
         </div>
       </div>
 
-      <div class="reminder">⏳ Please complete all fields you can. After clicking <strong>Submit for Summary</strong>, wait a few moments while your educational summary is generated.</div>
+      <div class="actions">
+        <div class="reminder">⏳ Please complete all fields you can. After clicking <strong>Submit for Summary</strong>, wait a few moments while your educational summary is generated.</div>
+        <button class="ghost" type="button" onclick="clearFormAndStorage()" title="Clear saved answers on this device only">Clear saved answers</button>
+      </div>
       <button class="submit" type="submit">Submit for Summary</button>
     </form>
 
